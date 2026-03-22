@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast'
 
 export default function Index() {
   const [period, setPeriod] = useState('hoje')
-  const [module, setModule] = useState('geral')
+  const [module, setModule] = useState('empresa')
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
@@ -35,11 +35,11 @@ export default function Index() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 pb-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
-            Dashboard de Inteligência
+            Dashboard Dinâmico
           </h1>
           <p className="text-sm text-muted-foreground mt-1 font-medium">
             Visão estratégica e operacional - Eletro DVolta
@@ -47,11 +47,12 @@ export default function Index() {
         </div>
         <div className="flex flex-col xs:flex-row items-center gap-3 w-full sm:w-auto">
           <Select value={module} onValueChange={setModule}>
-            <SelectTrigger className="w-full sm:w-[160px] bg-white border-[#D1D1D1] shadow-sm font-medium">
+            <SelectTrigger className="w-full sm:w-[160px] bg-card border-border shadow-sm font-medium">
               <SelectValue placeholder="Módulo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="geral">Visão Geral</SelectItem>
+              <SelectItem value="empresa">Empresa</SelectItem>
+              <SelectItem value="clientes">Clientes</SelectItem>
               <SelectItem value="vendas">Vendas</SelectItem>
               <SelectItem value="crm">CRM</SelectItem>
               <SelectItem value="estoque">Estoque</SelectItem>
@@ -59,14 +60,14 @@ export default function Index() {
             </SelectContent>
           </Select>
           <Select value={period} onValueChange={handlePeriodChange}>
-            <SelectTrigger className="w-full sm:w-[160px] bg-white border-[#D1D1D1] shadow-sm font-medium">
+            <SelectTrigger className="w-full sm:w-[160px] bg-card border-border shadow-sm font-medium">
               <SelectValue placeholder="Período" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="hoje">Hoje</SelectItem>
               <SelectItem value="7dias">Últimos 7 dias</SelectItem>
               <SelectItem value="mes">Mês atual</SelectItem>
-              <SelectItem value="personalizado">Personalizado...</SelectItem>
+              <SelectItem value="personalizado">Personalizado</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -78,12 +79,12 @@ export default function Index() {
             {Array(4)
               .fill(0)
               .map((_, i) => (
-                <Skeleton key={i} className="h-[140px] w-full rounded-xl bg-[#E5E4E2]/50" />
+                <Skeleton key={i} className="h-[140px] w-full rounded-xl bg-muted" />
               ))}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <Skeleton className="lg:col-span-2 h-[400px] rounded-xl bg-[#E5E4E2]/50" />
-            <Skeleton className="h-[400px] rounded-xl bg-[#E5E4E2]/50" />
+            <Skeleton className="lg:col-span-2 h-[400px] rounded-xl bg-muted" />
+            <Skeleton className="h-[400px] rounded-xl bg-muted" />
           </div>
         </div>
       ) : (
@@ -93,7 +94,11 @@ export default function Index() {
         </>
       )}
 
-      <AIAssistant />
+      {/* AI Assistant Section */}
+      <div className="mt-4 pt-8 border-t border-border">
+        <h2 className="text-xl font-bold text-foreground mb-4">Assistente de IA</h2>
+        <AIAssistant />
+      </div>
     </div>
   )
 }

@@ -29,20 +29,25 @@ const pieData = [
   { name: 'Serviços', value: 200 },
 ]
 
-const COLORS = ['#007AFF', '#6366F1', '#8B5CF6', '#38BDF8']
-
 const chartConfig = {
   vendas: { label: 'Vendas Realizadas', color: 'hsl(var(--primary))' },
-  metas: { label: 'Metas Estipuladas', color: 'hsl(var(--secondary))' },
+  metas: { label: 'Metas Estipuladas', color: 'hsl(var(--chart-2))' },
 }
 
 export function DashboardCharts({ module, period }: { module: string; period: string }) {
+  const COLORS = [
+    'hsl(var(--chart-1))',
+    'hsl(var(--chart-2))',
+    'hsl(var(--chart-3))',
+    'hsl(var(--chart-4))',
+  ]
+
   return (
     <div
       className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-in-up"
       style={{ animationDelay: '100ms' }}
     >
-      <Card className="lg:col-span-2 shadow-subtle border-[#D1D1D1] bg-white">
+      <Card className="lg:col-span-2 shadow-sm border-border bg-card">
         <CardHeader>
           <CardTitle className="text-lg text-foreground">Desempenho de Crescimento</CardTitle>
         </CardHeader>
@@ -51,24 +56,28 @@ export function DashboardCharts({ module, period }: { module: string; period: st
             <AreaChart data={areaData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorVendas" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#007AFF" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#007AFF" stopOpacity={0} />
+                  <stop offset="5%" stopColor="var(--color-vendas)" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="var(--color-vendas)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E4E2" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
               <XAxis
                 dataKey="name"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: '#848482', fontSize: 12 }}
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                 dy={10}
               />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#848482', fontSize: 12 }} />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+              />
               <ChartTooltip content={<ChartTooltipContent />} />
               <Area
                 type="monotone"
                 dataKey="vendas"
-                stroke="#007AFF"
+                stroke="var(--color-vendas)"
                 strokeWidth={3}
                 fillOpacity={1}
                 fill="url(#colorVendas)"
@@ -78,7 +87,7 @@ export function DashboardCharts({ module, period }: { module: string; period: st
         </CardContent>
       </Card>
 
-      <Card className="shadow-subtle border-[#D1D1D1] bg-white">
+      <Card className="shadow-sm border-border bg-card">
         <CardHeader>
           <CardTitle className="text-lg text-foreground">Distribuição por Categoria</CardTitle>
         </CardHeader>
@@ -102,10 +111,11 @@ export function DashboardCharts({ module, period }: { module: string; period: st
               <RechartsTooltip
                 contentStyle={{
                   borderRadius: '8px',
-                  border: '1px solid #D1D1D1',
+                  border: '1px solid hsl(var(--border))',
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                  backgroundColor: 'hsl(var(--card))',
                 }}
-                itemStyle={{ color: '#333333', fontWeight: 500 }}
+                itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 500 }}
               />
             </PieChart>
           </ResponsiveContainer>
