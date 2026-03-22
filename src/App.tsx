@@ -11,6 +11,7 @@ import Vendas from './pages/Vendas'
 import NovaVenda from './pages/NovaVenda'
 import CRM from './pages/CRM'
 import Estoque from './pages/Estoque'
+import NovoProduto from './pages/NovoProduto'
 import Financeiro from './pages/Financeiro'
 import NotFound from './pages/NotFound'
 
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/vendas/nova" element={<NovaVenda />} />
           <Route path="/crm" element={<CRM />} />
           <Route path="/estoque" element={<Estoque />} />
+          <Route path="/estoque/novo" element={<NovoProduto />} />
           <Route path="/financeiro" element={<Financeiro />} />
         </Route>
         <Route path="*" element={<NotFound />} />

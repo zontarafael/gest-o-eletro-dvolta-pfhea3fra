@@ -10,6 +10,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Plus, PackageSearch } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 const produtos = [
   {
@@ -47,8 +48,10 @@ export default function Estoque() {
           <Button variant="outline" className="shadow-sm bg-white border-[#D1D1D1] gap-2">
             <PackageSearch className="w-4 h-4" /> Relatório
           </Button>
-          <Button className="shadow-subtle gap-2">
-            <Plus className="w-4 h-4" /> Novo Produto
+          <Button asChild className="shadow-subtle gap-2">
+            <Link to="/estoque/novo">
+              <Plus className="w-4 h-4" /> Novo Produto
+            </Link>
           </Button>
         </div>
       </div>
