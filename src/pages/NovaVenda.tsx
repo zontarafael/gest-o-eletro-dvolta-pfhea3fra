@@ -3,6 +3,8 @@ import { ClienteSection } from '@/components/vendas/ClienteSection'
 import { ProdutosSection } from '@/components/vendas/ProdutosSection'
 import { TransporteSection } from '@/components/vendas/TransporteSection'
 import { PagamentoSection } from '@/components/vendas/PagamentoSection'
+import { AssinaturaSection } from '@/components/vendas/AssinaturaSection'
+import { ImpressoesSection } from '@/components/vendas/ImpressoesSection'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
@@ -45,6 +47,8 @@ export default function NovaVenda() {
         <ProdutosSection />
         <TransporteSection />
         <PagamentoSection />
+        <AssinaturaSection />
+        <ImpressoesSection />
 
         <div className="flex justify-end gap-4 pt-6 mt-4 border-t border-[#D1D1D1]">
           <Button variant="outline" asChild className="shadow-subtle bg-white border-[#D1D1D1]">
