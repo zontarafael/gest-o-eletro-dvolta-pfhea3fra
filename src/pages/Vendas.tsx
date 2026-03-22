@@ -8,7 +8,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { ShoppingBag, TrendingUp, Percent } from 'lucide-react'
+import { ShoppingBag, TrendingUp, Percent, Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Link } from 'react-router-dom'
 
 const pedidos = [
   {
@@ -44,11 +46,23 @@ const pedidos = [
 export default function Vendas() {
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div>
-        <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Vendas e Pedidos</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Acompanhamento do funil e histórico transacional.
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
+            Vendas e Pedidos
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Acompanhamento do funil e histórico transacional.
+          </p>
+        </div>
+        <Button
+          asChild
+          className="shadow-subtle hover:-translate-y-0.5 transition-transform rounded-lg gap-2"
+        >
+          <Link to="/vendas/nova">
+            <Plus className="w-4 h-4" /> Nova Venda
+          </Link>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
