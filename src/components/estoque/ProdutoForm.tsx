@@ -63,6 +63,8 @@ export function ProdutoForm({
     imposto1: 0,
     imposto2: 0,
     imagemUrl: '',
+    precoVenda: 0,
+    despesasAdicionais: 0,
   }
 
   const [form, setForm] = useState<any>(defaultForm)
@@ -151,6 +153,8 @@ export function ProdutoForm({
       imposto1: Number(produto.imposto1) || 0,
       imposto2: Number(produto.imposto2) || 0,
       imagemUrl: produto.imagem_url || '',
+      precoVenda: Number(produto.preco_venda) || 0,
+      despesasAdicionais: Number(produto.despesas_adicionais) || 0,
     })
     setBusca('')
     setShowSugestoes(false)
@@ -190,6 +194,8 @@ export function ProdutoForm({
         imposto1: Number(data.imposto1) || 0,
         imposto2: Number(data.imposto2) || 0,
         imagemUrl: data.imagem_url || '',
+        precoVenda: Number(data.preco_venda) || 0,
+        despesasAdicionais: Number(data.despesas_adicionais) || 0,
       })
     } else {
       toast({
@@ -244,6 +250,10 @@ export function ProdutoForm({
   const proporcao = custoGeral > 0 ? custoAtual / custoGeral : 0
   const freteUnitario = form.quantidade > 0 ? (freteTotal * proporcao) / form.quantidade : 0
 
+  const custoTotalItem = form.custoUnitario + form.despesasAdicionais + freteUnitario
+  const lucroBruto = form.precoVenda - custoTotalItem
+  const margemLucro = form.precoVenda > 0 ? (lucroBruto / form.precoVenda) * 100 : 0
+
   const handleAdd = () => {
     if (!form.nome || form.quantidade <= 0) return
     onAdd({ ...form, id: form.id || Date.now().toString() })
@@ -254,307 +264,363 @@ export function ProdutoForm({
   }
 
   return (
-    <Card className="border-[#D1D1D1] shadow-subtle bg-white">
-      <CardHeader>
-        <CardTitle className="text-lg text-foreground">Produto / Item da Nota</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="flex-shrink-0 flex flex-col items-center gap-3">
-            <div className="w-32 h-32 border border-[#D1D1D1] rounded-lg overflow-hidden bg-[#F5F5F7] flex items-center justify-center relative group">
-              {form.imagemUrl ? (
-                <img src={form.imagemUrl} alt="Produto" className="w-full h-full object-cover" />
-              ) : (
-                <div className="flex flex-col items-center justify-center text-muted-foreground opacity-50 p-2 text-center">
-                  <ImageIcon className="w-8 h-8 mb-1" />
-                  <span className="text-xs font-medium leading-tight">Sem Foto</span>
-                </div>
-              )}
-            </div>
-            <div className="relative w-full">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full text-xs h-8 border-[#D1D1D1] shadow-subtle"
-                disabled={uploading}
-              >
-                {uploading ? 'Enviando...' : form.imagemUrl ? 'Trocar Foto' : 'Adicionar Foto'}
-              </Button>
-              <Input
-                type="file"
-                accept="image/*"
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                onChange={handleFileUpload}
-                disabled={uploading}
-                title="Adicionar ou trocar foto"
-              />
-            </div>
-          </div>
-
-          <div className="flex-1 space-y-6">
-            <div className="flex gap-2 w-full lg:w-1/2 relative" ref={wrapperRef}>
-              <div className="relative w-full">
-                <Input
-                  placeholder="Buscar por Nome ou Código..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleBusca()}
-                  onFocus={() => {
-                    if (busca.trim().length >= 2) setShowSugestoes(true)
-                  }}
-                  className="bg-[#F5F5F7] border-[#D1D1D1] w-full"
-                />
-                {showSugestoes && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-[#D1D1D1] rounded-md shadow-lg max-h-60 overflow-auto">
-                    {isSearching ? (
-                      <div className="p-3 text-sm text-muted-foreground text-center">
-                        Buscando...
-                      </div>
-                    ) : sugestoes.length > 0 ? (
-                      <ul className="py-1">
-                        {sugestoes.map((prod) => (
-                          <li
-                            key={prod.id}
-                            onClick={() => selecionarProduto(prod)}
-                            className="px-3 py-2 hover:bg-[#F5F5F7] cursor-pointer text-sm flex flex-col transition-colors"
-                          >
-                            <span className="font-medium text-foreground">{prod.nome}</span>
-                            {prod.codigo && (
-                              <span className="text-xs text-muted-foreground">
-                                Cód: {prod.codigo}
-                              </span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <div className="p-3 text-sm text-muted-foreground text-center">
-                        Nenhum produto encontrado.
-                      </div>
-                    )}
+    <div className="space-y-6">
+      <Card className="border-[#D1D1D1] shadow-subtle bg-white">
+        <CardHeader>
+          <CardTitle className="text-lg text-foreground">Produto / Item da Nota</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="flex-shrink-0 flex flex-col items-center gap-3">
+              <div className="w-32 h-32 border border-[#D1D1D1] rounded-lg overflow-hidden bg-[#F5F5F7] flex items-center justify-center relative group">
+                {form.imagemUrl ? (
+                  <img src={form.imagemUrl} alt="Produto" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-muted-foreground opacity-50 p-2 text-center">
+                    <ImageIcon className="w-8 h-8 mb-1" />
+                    <span className="text-xs font-medium leading-tight">Sem Foto</span>
                   </div>
                 )}
               </div>
-              <Button
-                type="button"
-                onClick={handleBusca}
-                variant="secondary"
-                className="border-[#D1D1D1]"
-              >
-                <Search className="w-4 h-4 mr-2" /> Buscar
-              </Button>
+              <div className="relative w-full">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs h-8 border-[#D1D1D1] shadow-subtle"
+                  disabled={uploading}
+                >
+                  {uploading ? 'Enviando...' : form.imagemUrl ? 'Trocar Foto' : 'Adicionar Foto'}
+                </Button>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                  title="Adicionar ou trocar foto"
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-              <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <Label>Categoria</Label>
-                  {isNovaCategoria && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsNovaCategoria(false)
-                        setForm({ ...form, categoria: '', codCategoria: '' })
-                      }}
-                      className="text-[10px] text-primary hover:underline"
-                    >
-                      Voltar à lista
-                    </button>
+            <div className="flex-1 space-y-6">
+              <div className="flex gap-2 w-full lg:w-1/2 relative" ref={wrapperRef}>
+                <div className="relative w-full">
+                  <Input
+                    placeholder="Buscar por Nome ou Código..."
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleBusca()}
+                    onFocus={() => {
+                      if (busca.trim().length >= 2) setShowSugestoes(true)
+                    }}
+                    className="bg-[#F5F5F7] border-[#D1D1D1] w-full"
+                  />
+                  {showSugestoes && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-[#D1D1D1] rounded-md shadow-lg max-h-60 overflow-auto">
+                      {isSearching ? (
+                        <div className="p-3 text-sm text-muted-foreground text-center">
+                          Buscando...
+                        </div>
+                      ) : sugestoes.length > 0 ? (
+                        <ul className="py-1">
+                          {sugestoes.map((prod) => (
+                            <li
+                              key={prod.id}
+                              onClick={() => selecionarProduto(prod)}
+                              className="px-3 py-2 hover:bg-[#F5F5F7] cursor-pointer text-sm flex flex-col transition-colors"
+                            >
+                              <span className="font-medium text-foreground">{prod.nome}</span>
+                              {prod.codigo && (
+                                <span className="text-xs text-muted-foreground">
+                                  Cód: {prod.codigo}
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="p-3 text-sm text-muted-foreground text-center">
+                          Nenhum produto encontrado.
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
-                {isNovaCategoria ? (
+                <Button
+                  type="button"
+                  onClick={handleBusca}
+                  variant="secondary"
+                  className="border-[#D1D1D1]"
+                >
+                  <Search className="w-4 h-4 mr-2" /> Buscar
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <Label>Categoria</Label>
+                    {isNovaCategoria && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsNovaCategoria(false)
+                          setForm({ ...form, categoria: '', codCategoria: '' })
+                        }}
+                        className="text-[10px] text-primary hover:underline"
+                      >
+                        Voltar à lista
+                      </button>
+                    )}
+                  </div>
+                  {isNovaCategoria ? (
+                    <Input
+                      autoFocus
+                      placeholder="Nome da categoria..."
+                      className="bg-[#F5F5F7] border-[#D1D1D1]"
+                      value={form.categoria}
+                      onChange={(e) => setForm({ ...form, categoria: e.target.value })}
+                    />
+                  ) : (
+                    <Select
+                      value={form.categoria}
+                      onValueChange={(v) => {
+                        if (v === 'OUTRA') {
+                          setIsNovaCategoria(true)
+                          setForm({ ...form, categoria: '', codCategoria: '' })
+                        } else {
+                          setForm({ ...form, categoria: v, codCategoria: CATEGORY_MAP[v] || '' })
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="bg-[#F5F5F7] border-[#D1D1D1]">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.keys(CATEGORY_MAP).map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="OUTRA" className="font-semibold text-primary">
+                          + Nova Categoria
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Label>Cód. Categoria</Label>
                   <Input
-                    autoFocus
-                    placeholder="Nome da categoria..."
                     className="bg-[#F5F5F7] border-[#D1D1D1]"
-                    value={form.categoria}
-                    onChange={(e) => setForm({ ...form, categoria: e.target.value })}
+                    value={form.codCategoria}
+                    placeholder={isNovaCategoria ? 'Ex: NOV' : ''}
+                    onChange={(e) =>
+                      setForm({ ...form, codCategoria: e.target.value.toUpperCase() })
+                    }
                   />
-                ) : (
+                </div>
+                <div className="space-y-1">
+                  <Label>Cód. Produto</Label>
+                  <Input
+                    className="bg-[#F5F5F7] border-[#D1D1D1]"
+                    value={form.codProduto}
+                    onChange={(e) => setForm({ ...form, codProduto: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Cód. Fábrica</Label>
+                  <Input
+                    className="bg-[#F5F5F7] border-[#D1D1D1]"
+                    value={form.codFabrica}
+                    onChange={(e) => setForm({ ...form, codFabrica: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1 xl:col-span-2">
+                  <Label>Nome do Produto</Label>
+                  <Input
+                    className="bg-[#F5F5F7] border-[#D1D1D1]"
+                    value={form.nome}
+                    onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Marca</Label>
+                  <Input
+                    className="bg-[#F5F5F7] border-[#D1D1D1]"
+                    value={form.marca}
+                    onChange={(e) => setForm({ ...form, marca: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Capacidade/Tamanho</Label>
+                  <Input
+                    className="bg-[#F5F5F7] border-[#D1D1D1]"
+                    value={form.capacidade}
+                    onChange={(e) => setForm({ ...form, capacidade: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Portas/Outros</Label>
+                  <Input
+                    className="bg-[#F5F5F7] border-[#D1D1D1]"
+                    value={form.portas}
+                    onChange={(e) => setForm({ ...form, portas: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Cor</Label>
+                  <Select value={form.cor} onValueChange={(v) => setForm({ ...form, cor: v })}>
+                    <SelectTrigger className="bg-[#F5F5F7] border-[#D1D1D1]">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[
+                        'Inox',
+                        'Inox Preto',
+                        'Preto',
+                        'Preto Fosco',
+                        'Branco',
+                        'Azul',
+                        'Vermelha',
+                        'Amarela',
+                        'Cinza',
+                        'Outros',
+                      ].map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Voltagem</Label>
                   <Select
-                    value={form.categoria}
-                    onValueChange={(v) => {
-                      if (v === 'OUTRA') {
-                        setIsNovaCategoria(true)
-                        setForm({ ...form, categoria: '', codCategoria: '' })
-                      } else {
-                        setForm({ ...form, categoria: v, codCategoria: CATEGORY_MAP[v] || '' })
-                      }
-                    }}
+                    value={form.voltagem}
+                    onValueChange={(v) => setForm({ ...form, voltagem: v })}
                   >
                     <SelectTrigger className="bg-[#F5F5F7] border-[#D1D1D1]">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.keys(CATEGORY_MAP).map((c) => (
+                      {['110V', '220V', 'Automático'].map((c) => (
                         <SelectItem key={c} value={c}>
                           {c}
                         </SelectItem>
                       ))}
-                      <SelectItem value="OUTRA" className="font-semibold text-primary">
-                        + Nova Categoria
-                      </SelectItem>
                     </SelectContent>
                   </Select>
-                )}
-              </div>
-              <div className="space-y-1">
-                <Label>Cód. Categoria</Label>
-                <Input
-                  className="bg-[#F5F5F7] border-[#D1D1D1]"
-                  value={form.codCategoria}
-                  placeholder={isNovaCategoria ? 'Ex: NOV' : ''}
-                  onChange={(e) => setForm({ ...form, codCategoria: e.target.value.toUpperCase() })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Cód. Produto</Label>
-                <Input
-                  className="bg-[#F5F5F7] border-[#D1D1D1]"
-                  value={form.codProduto}
-                  onChange={(e) => setForm({ ...form, codProduto: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Cód. Fábrica</Label>
-                <Input
-                  className="bg-[#F5F5F7] border-[#D1D1D1]"
-                  value={form.codFabrica}
-                  onChange={(e) => setForm({ ...form, codFabrica: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1 xl:col-span-2">
-                <Label>Nome do Produto</Label>
-                <Input
-                  className="bg-[#F5F5F7] border-[#D1D1D1]"
-                  value={form.nome}
-                  onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Marca</Label>
-                <Input
-                  className="bg-[#F5F5F7] border-[#D1D1D1]"
-                  value={form.marca}
-                  onChange={(e) => setForm({ ...form, marca: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Capacidade/Tamanho</Label>
-                <Input
-                  className="bg-[#F5F5F7] border-[#D1D1D1]"
-                  value={form.capacidade}
-                  onChange={(e) => setForm({ ...form, capacidade: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Portas/Outros</Label>
-                <Input
-                  className="bg-[#F5F5F7] border-[#D1D1D1]"
-                  value={form.portas}
-                  onChange={(e) => setForm({ ...form, portas: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Cor</Label>
-                <Select value={form.cor} onValueChange={(v) => setForm({ ...form, cor: v })}>
-                  <SelectTrigger className="bg-[#F5F5F7] border-[#D1D1D1]">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[
-                      'Inox',
-                      'Inox Preto',
-                      'Preto',
-                      'Preto Fosco',
-                      'Branco',
-                      'Azul',
-                      'Vermelha',
-                      'Amarela',
-                      'Cinza',
-                      'Outros',
-                    ].map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Voltagem</Label>
-                <Select
-                  value={form.voltagem}
-                  onValueChange={(v) => setForm({ ...form, voltagem: v })}
-                >
-                  <SelectTrigger className="bg-[#F5F5F7] border-[#D1D1D1]">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {['110V', '220V', 'Automático'].map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Qtd.</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  className="bg-[#F5F5F7] border-[#D1D1D1]"
-                  value={form.quantidade}
-                  onChange={(e) => setForm({ ...form, quantidade: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Custo Unitário (R$)</Label>
-                <Input
-                  type="number"
-                  className="bg-[#F5F5F7] border-[#D1D1D1]"
-                  value={form.custoUnitario}
-                  onChange={(e) => setForm({ ...form, custoUnitario: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Imposto 1 (%)</Label>
-                <Input
-                  type="number"
-                  className="bg-[#F5F5F7] border-[#D1D1D1]"
-                  value={form.imposto1}
-                  onChange={(e) => setForm({ ...form, imposto1: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Imposto 2 (%)</Label>
-                <Input
-                  type="number"
-                  className="bg-[#F5F5F7] border-[#D1D1D1]"
-                  value={form.imposto2}
-                  onChange={(e) => setForm({ ...form, imposto2: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-1 xl:col-span-3">
-                <Label>Observações</Label>
-                <Input
-                  className="bg-[#F5F5F7] border-[#D1D1D1]"
-                  value={form.observacoes}
-                  onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
-                />
+                </div>
+                <div className="space-y-1">
+                  <Label>Qtd.</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    className="bg-[#F5F5F7] border-[#D1D1D1]"
+                    value={form.quantidade}
+                    onChange={(e) => setForm({ ...form, quantidade: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Imposto 1 (%)</Label>
+                  <Input
+                    type="number"
+                    className="bg-[#F5F5F7] border-[#D1D1D1]"
+                    value={form.imposto1}
+                    onChange={(e) => setForm({ ...form, imposto1: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Imposto 2 (%)</Label>
+                  <Input
+                    type="number"
+                    className="bg-[#F5F5F7] border-[#D1D1D1]"
+                    value={form.imposto2}
+                    onChange={(e) => setForm({ ...form, imposto2: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-1 xl:col-span-3">
+                  <Label>Observações</Label>
+                  <Input
+                    className="bg-[#F5F5F7] border-[#D1D1D1]"
+                    value={form.observacoes}
+                    onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t border-[#D1D1D1] gap-4">
-          <div className="text-sm font-semibold text-muted-foreground p-3 bg-[#F5F5F7] rounded-md border border-[#D1D1D1]">
-            Frete Unitário Calculado:{' '}
-            <span className="text-primary font-bold ml-1">R$ {freteUnitario.toFixed(2)}</span>
+      <Card className="border-[#D1D1D1] shadow-subtle bg-white">
+        <CardHeader>
+          <CardTitle className="text-lg text-foreground">Custos e valores de venda</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <Label>Custo de Aquisição (R$)</Label>
+              <Input
+                type="number"
+                className="bg-[#F5F5F7] border-[#D1D1D1]"
+                value={form.custoUnitario}
+                onChange={(e) => setForm({ ...form, custoUnitario: Number(e.target.value) })}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Despesas Adicionais (R$)</Label>
+              <Input
+                type="number"
+                className="bg-[#F5F5F7] border-[#D1D1D1]"
+                value={form.despesasAdicionais}
+                onChange={(e) => setForm({ ...form, despesasAdicionais: Number(e.target.value) })}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Frete Unitário (R$)</Label>
+              <Input
+                type="number"
+                readOnly
+                className="bg-[#E5E5E5] border-[#D1D1D1] text-muted-foreground"
+                value={freteUnitario.toFixed(2)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Preço de Venda Final (R$)</Label>
+              <Input
+                type="number"
+                className="bg-[#F5F5F7] border-[#D1D1D1] border-primary/50 focus-visible:ring-primary/30"
+                value={form.precoVenda}
+                onChange={(e) => setForm({ ...form, precoVenda: Number(e.target.value) })}
+              />
+            </div>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto flex-col sm:flex-row">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-[#D1D1D1]">
+            <div className="p-4 bg-[#F5F5F7] rounded-lg border border-[#D1D1D1] flex flex-col justify-center">
+              <span className="text-sm font-medium text-muted-foreground">Lucro Bruto</span>
+              <span
+                className={`text-2xl font-bold ${lucroBruto >= 0 ? 'text-green-600' : 'text-red-600'}`}
+              >
+                R$ {lucroBruto.toFixed(2)}
+              </span>
+            </div>
+            <div className="p-4 bg-[#F5F5F7] rounded-lg border border-[#D1D1D1] flex flex-col justify-center">
+              <span className="text-sm font-medium text-muted-foreground">
+                Margem de Porcentagem
+              </span>
+              <span
+                className={`text-2xl font-bold ${margemLucro >= 0 ? 'text-green-600' : 'text-red-600'}`}
+              >
+                {margemLucro.toFixed(2)}%
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-end pt-4 border-t border-[#D1D1D1] gap-4">
             {produtoEditando && onCancelEdit && (
               <Button
                 type="button"
@@ -574,8 +640,8 @@ export function ProdutoForm({
               {produtoEditando ? 'Atualizar Item' : 'Adicionar à Entrada'}
             </Button>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

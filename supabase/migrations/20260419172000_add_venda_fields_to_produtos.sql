@@ -1,0 +1,2 @@
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS preco_venda NUMERIC DEFAULT 0;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS despesas_adicionais NUMERIC DEFAULT 0;

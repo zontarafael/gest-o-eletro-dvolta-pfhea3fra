@@ -90,6 +90,8 @@ export default function NovoProduto() {
         imposto1: p.imposto1,
         imposto2: p.imposto2,
         valor_frete_unitario: freteUnitario,
+        preco_venda: p.precoVenda || 0,
+        despesas_adicionais: p.despesasAdicionais || 0,
         fornecedor_id: fornecedorId,
         lote,
         imagem_url: p.imagemUrl || null,
