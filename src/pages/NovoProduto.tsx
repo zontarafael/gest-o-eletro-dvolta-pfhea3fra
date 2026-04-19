@@ -33,6 +33,7 @@ export default function NovoProduto() {
   }, [notaFiscal])
   const [fornecedor, setFornecedor] = useState<any>({})
   const [loading, setLoading] = useState(false)
+  const [produtoEditando, setProdutoEditando] = useState<any>(null)
 
   const totalCustoProdutos = useMemo(
     () => produtos.reduce((acc, p) => acc + p.quantidade * p.custoUnitario, 0),
@@ -177,9 +178,30 @@ export default function NovoProduto() {
       <ProdutoForm
         freteTotal={freteTotal}
         totalOutrosCusto={totalCustoProdutos}
-        onAdd={(p) => setProdutos([...produtos, p])}
+        produtoEditando={produtoEditando}
+        onCancelEdit={() => setProdutoEditando(null)}
+        onAdd={(p) => {
+          if (produtoEditando) {
+            setProdutos(produtos.map((prod) => (prod.id === p.id ? p : prod)))
+            setProdutoEditando(null)
+          } else {
+            setProdutos([...produtos, p])
+          }
+        }}
       />
-      <ProdutosList produtos={produtos} freteTotal={freteTotal} totalCusto={totalCustoProdutos} />
+      <ProdutosList
+        produtos={produtos}
+        freteTotal={freteTotal}
+        totalCusto={totalCustoProdutos}
+        onEdit={(p) => {
+          setProdutoEditando(p)
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }}
+        onDelete={(id) => {
+          setProdutos(produtos.filter((p) => p.id !== id))
+          if (produtoEditando?.id === id) setProdutoEditando(null)
+        }}
+      />
 
       {produtos.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center pt-6 mt-4 border-t border-[#D1D1D1] gap-4">

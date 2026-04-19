@@ -1,3 +1,4 @@
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -6,54 +7,84 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Edit, Trash2 } from 'lucide-react'
 
-interface ProdutosListProps {
+export function ProdutosList({
+  produtos,
+  freteTotal,
+  totalCusto,
+  onEdit,
+  onDelete,
+}: {
   produtos: any[]
   freteTotal: number
   totalCusto: number
-}
-
-export function ProdutosList({ produtos, freteTotal, totalCusto }: ProdutosListProps) {
+  onEdit?: (produto: any) => void
+  onDelete?: (id: string) => void
+}) {
   if (produtos.length === 0) return null
 
   return (
-    <Card className="border-[#D1D1D1] shadow-subtle bg-white">
+    <Card className="border-[#D1D1D1] shadow-subtle bg-white mt-6">
       <CardHeader>
         <CardTitle className="text-lg">Itens Registrados</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="rounded-md border border-[#D1D1D1] overflow-hidden">
+        <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-[#F5F5F7]">
-              <TableRow className="border-[#D1D1D1]">
-                <TableHead className="font-semibold">Nome do Produto</TableHead>
-                <TableHead className="font-semibold text-right">Qtd.</TableHead>
-                <TableHead className="font-semibold text-right">Custo Un.</TableHead>
-                <TableHead className="font-semibold text-right">Custo Total</TableHead>
-                <TableHead className="font-semibold text-right text-primary">
-                  Frete Un. Proporcional
-                </TableHead>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Produto</TableHead>
+                <TableHead>Qtd.</TableHead>
+                <TableHead>Custo Unit.</TableHead>
+                <TableHead>Frete Unit.</TableHead>
+                <TableHead>Subtotal</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {produtos.map((p: any) => {
+              {produtos.map((p) => {
                 const custoTotalItem = p.quantidade * p.custoUnitario
                 const proporcao = totalCusto > 0 ? custoTotalItem / totalCusto : 0
                 const freteUnitario = p.quantidade > 0 ? (freteTotal * proporcao) / p.quantidade : 0
+                const subtotal = custoTotalItem + freteUnitario * p.quantidade
 
                 return (
-                  <TableRow key={p.id} className="border-[#D1D1D1] hover:bg-[#F5F5F7]/50">
-                    <TableCell className="font-medium text-foreground">
-                      {p.nome || 'Produto sem nome'}
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">
+                      {p.nome}
+                      {p.codigo && (
+                        <span className="text-xs text-muted-foreground block">Cód: {p.codigo}</span>
+                      )}
                     </TableCell>
-                    <TableCell className="text-right">{p.quantidade}</TableCell>
-                    <TableCell className="text-right">R$ {p.custoUnitario.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      R$ {custoTotalItem.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right font-bold text-primary">
-                      R$ {freteUnitario.toFixed(2)}
+                    <TableCell>{p.quantidade}</TableCell>
+                    <TableCell>R$ {p.custoUnitario.toFixed(2)}</TableCell>
+                    <TableCell>R$ {freteUnitario.toFixed(2)}</TableCell>
+                    <TableCell>R$ {subtotal.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        {onEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEdit(p)}
+                            title="Editar"
+                          >
+                            <Edit className="w-4 h-4 text-blue-600" />
+                          </Button>
+                        )}
+                        {onDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onDelete(p.id)}
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 )

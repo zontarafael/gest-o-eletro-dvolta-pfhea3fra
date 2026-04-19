@@ -18,10 +18,14 @@ export function ProdutoForm({
   freteTotal,
   totalOutrosCusto,
   onAdd,
+  produtoEditando,
+  onCancelEdit,
 }: {
   freteTotal: number
   totalOutrosCusto: number
   onAdd: (p: any) => void
+  produtoEditando?: any
+  onCancelEdit?: () => void
 }) {
   const { toast } = useToast()
   const [busca, setBusca] = useState('')
@@ -42,7 +46,7 @@ export function ProdutoForm({
     Coifa: 'COI',
   }
 
-  const defaultForm = {
+  const defaultForm: any = {
     categoria: '',
     codCategoria: '',
     codProduto: '',
@@ -61,12 +65,25 @@ export function ProdutoForm({
     imagemUrl: '',
   }
 
-  const [form, setForm] = useState(defaultForm)
+  const [form, setForm] = useState<any>(defaultForm)
   const [isNovaCategoria, setIsNovaCategoria] = useState(false)
   const [sugestoes, setSugestoes] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [showSugestoes, setShowSugestoes] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (produtoEditando) {
+      setForm(produtoEditando)
+      const isKnownCat = produtoEditando.categoria
+        ? Object.keys(CATEGORY_MAP).includes(produtoEditando.categoria)
+        : false
+      setIsNovaCategoria(produtoEditando.categoria && !isKnownCat)
+    } else {
+      setForm(defaultForm)
+      setIsNovaCategoria(false)
+    }
+  }, [produtoEditando])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -229,7 +246,7 @@ export function ProdutoForm({
 
   const handleAdd = () => {
     if (!form.nome || form.quantidade <= 0) return
-    onAdd({ ...form, id: Date.now().toString() })
+    onAdd({ ...form, id: form.id || Date.now().toString() })
     setForm(defaultForm)
     setBusca('')
     setProdutoEncontrado(null)
@@ -537,13 +554,26 @@ export function ProdutoForm({
             Frete Unitário Calculado:{' '}
             <span className="text-primary font-bold ml-1">R$ {freteUnitario.toFixed(2)}</span>
           </div>
-          <Button
-            type="button"
-            onClick={handleAdd}
-            className="gap-2 shadow-subtle w-full sm:w-auto"
-          >
-            <Plus className="w-4 h-4" /> Adicionar à Entrada
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto flex-col sm:flex-row">
+            {produtoEditando && onCancelEdit && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancelEdit}
+                className="w-full sm:w-auto"
+              >
+                Cancelar Edição
+              </Button>
+            )}
+            <Button
+              type="button"
+              onClick={handleAdd}
+              className="gap-2 shadow-subtle w-full sm:w-auto"
+            >
+              <Plus className="w-4 h-4" />{' '}
+              {produtoEditando ? 'Atualizar Item' : 'Adicionar à Entrada'}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
