@@ -65,6 +65,8 @@ export function ProdutoForm({
     imagemUrl: '',
     precoVenda: 0,
     despesasAdicionais: 0,
+    valorSite: 0,
+    taxaSite: 0,
   }
 
   const [form, setForm] = useState<any>(defaultForm)
@@ -155,6 +157,8 @@ export function ProdutoForm({
       imagemUrl: produto.imagem_url || '',
       precoVenda: Number(produto.preco_venda) || 0,
       despesasAdicionais: Number(produto.despesas_adicionais) || 0,
+      valorSite: Number(produto.valor_site) || 0,
+      taxaSite: Number(produto.taxa_site) || 0,
     })
     setBusca('')
     setShowSugestoes(false)
@@ -196,6 +200,8 @@ export function ProdutoForm({
         imagemUrl: data.imagem_url || '',
         precoVenda: Number(data.preco_venda) || 0,
         despesasAdicionais: Number(data.despesas_adicionais) || 0,
+        valorSite: Number(data.valor_site) || 0,
+        taxaSite: Number(data.taxa_site) || 0,
       })
     } else {
       toast({
@@ -253,6 +259,8 @@ export function ProdutoForm({
   const custoTotalItem = form.custoUnitario + form.despesasAdicionais + freteUnitario
   const lucroBruto = form.precoVenda - custoTotalItem
   const margemLucro = form.precoVenda > 0 ? (lucroBruto / form.precoVenda) * 100 : 0
+  const valorLiquidoSite =
+    (form.valorSite || 0) - ((form.valorSite || 0) * (form.taxaSite || 0)) / 100
 
   const handleAdd = () => {
     if (!form.nome || form.quantidade <= 0) return
@@ -595,6 +603,33 @@ export function ProdutoForm({
                 className="bg-[#F5F5F7] border-[#D1D1D1] border-primary/50 focus-visible:ring-primary/30"
                 value={form.precoVenda}
                 onChange={(e) => setForm({ ...form, precoVenda: Number(e.target.value) })}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Valor de Site (R$)</Label>
+              <Input
+                type="number"
+                className="bg-[#F5F5F7] border-[#D1D1D1]"
+                value={form.valorSite}
+                onChange={(e) => setForm({ ...form, valorSite: Number(e.target.value) })}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Taxa/Desconto Site (%)</Label>
+              <Input
+                type="number"
+                className="bg-[#F5F5F7] border-[#D1D1D1]"
+                value={form.taxaSite}
+                onChange={(e) => setForm({ ...form, taxaSite: Number(e.target.value) })}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Valor Líquido Site (R$)</Label>
+              <Input
+                type="number"
+                readOnly
+                className="bg-[#E5E5E5] border-[#D1D1D1] text-muted-foreground font-semibold"
+                value={valorLiquidoSite.toFixed(2)}
               />
             </div>
           </div>

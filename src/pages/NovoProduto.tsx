@@ -92,6 +92,8 @@ export default function NovoProduto() {
         valor_frete_unitario: freteUnitario,
         preco_venda: p.precoVenda || 0,
         despesas_adicionais: p.despesasAdicionais || 0,
+        valor_site: p.valorSite || 0,
+        taxa_site: p.taxaSite || 0,
         fornecedor_id: fornecedorId,
         lote,
         imagem_url: p.imagemUrl || null,
@@ -99,7 +101,7 @@ export default function NovoProduto() {
       }
     })
 
-    await supabase.from('produtos').insert(produtosToInsert)
+    await supabase.from('produtos').insert(produtosToInsert as any)
 
     setLoading(false)
     toast({
