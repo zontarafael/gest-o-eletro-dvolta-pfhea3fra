@@ -164,4 +164,32 @@ export default function Vendas() {
                         {Number(p.valor_total).toLocaleString('pt-BR', {
                           minimumFractionDigits: 2,
                         })}
-                      </Tabl
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(p.data_venda).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={`font-medium ${
+                            p.status === 'Concluído'
+                              ? 'border-[#10B981] text-[#10B981] bg-[#10B981]/10'
+                              : p.status === 'Em Processamento'
+                                ? 'border-[#F59E0B] text-[#F59E0B] bg-[#F59E0B]/10'
+                                : 'border-destructive text-destructive bg-destructive/10'
+                          }`}
+                        >
+                          {p.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

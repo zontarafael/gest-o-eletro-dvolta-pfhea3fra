@@ -123,4 +123,34 @@ export default function Clientes() {
                       <TableCell className="font-medium text-foreground">{c.nome}</TableCell>
                       <TableCell className="text-muted-foreground">{c.email || 'N/A'}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(c.
+                        {new Date(c.created_at).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        R${' '}
+                        {Number(c.total_gasto || 0).toLocaleString('pt-BR', {
+                          minimumFractionDigits: 2,
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={c.status === 'Ativo' ? 'default' : 'secondary'}
+                          className={
+                            c.status === 'Ativo'
+                              ? 'bg-[#10B981] hover:bg-[#10B981]/90'
+                              : 'bg-[#848482] text-white hover:bg-[#848482]/90'
+                          }
+                        >
+                          {c.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
