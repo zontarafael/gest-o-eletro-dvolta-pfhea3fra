@@ -57,6 +57,7 @@ export function ProdutoForm({
     portas: '',
     cor: '',
     observacoes: '',
+    linkSite: '',
     voltagem: '',
     quantidade: 1,
     custoUnitario: 0,
@@ -150,6 +151,7 @@ export function ProdutoForm({
       portas: produto.portas || '',
       cor: produto.cor || '',
       observacoes: produto.observacoes || '',
+      linkSite: produto.link_site || '',
       voltagem: produto.voltagem || '',
       custoUnitario: Number(produto.custo_unitario) || 0,
       imposto1: Number(produto.imposto1) || 0,
@@ -193,6 +195,7 @@ export function ProdutoForm({
         portas: data.portas || '',
         cor: data.cor || '',
         observacoes: data.observacoes || '',
+        linkSite: data.link_site || '',
         voltagem: data.voltagem || '',
         custoUnitario: Number(data.custo_unitario) || 0,
         imposto1: Number(data.imposto1) || 0,
@@ -549,12 +552,22 @@ export function ProdutoForm({
                     onChange={(e) => setForm({ ...form, imposto2: Number(e.target.value) })}
                   />
                 </div>
-                <div className="space-y-1 xl:col-span-3">
+                <div className="space-y-1 xl:col-span-2">
                   <Label>Observações</Label>
                   <Input
                     className="bg-[#F5F5F7] border-[#D1D1D1]"
                     value={form.observacoes}
                     onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1 xl:col-span-2">
+                  <Label>Link do Site</Label>
+                  <Input
+                    type="url"
+                    placeholder="https://"
+                    className="bg-[#F5F5F7] border-[#D1D1D1]"
+                    value={form.linkSite}
+                    onChange={(e) => setForm({ ...form, linkSite: e.target.value })}
                   />
                 </div>
               </div>
