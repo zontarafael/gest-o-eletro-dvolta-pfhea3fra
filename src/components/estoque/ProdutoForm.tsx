@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -63,6 +63,81 @@ export function ProdutoForm({
 
   const [form, setForm] = useState(defaultForm)
   const [isNovaCategoria, setIsNovaCategoria] = useState(false)
+  const [sugestoes, setSugestoes] = useState<any[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [showSugestoes, setShowSugestoes] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setShowSugestoes(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    const fetchSugestoes = async () => {
+      if (busca.trim().length < 2) {
+        setSugestoes([])
+        setShowSugestoes(false)
+        return
+      }
+
+      setIsSearching(true)
+      const { data } = await supabase
+        .from('produtos')
+        .select('*')
+        .or(`nome.ilike.%${busca}%,codigo.ilike.%${busca}%`)
+        .limit(10)
+
+      if (data && data.length > 0) {
+        setSugestoes(data)
+        setShowSugestoes(true)
+      } else {
+        setSugestoes([])
+        setShowSugestoes(true)
+      }
+      setIsSearching(false)
+    }
+
+    const timeoutId = setTimeout(fetchSugestoes, 300)
+    return () => clearTimeout(timeoutId)
+  }, [busca])
+
+  const selecionarProduto = (produto: any) => {
+    setProdutoEncontrado(produto)
+    const isKnownCat = produto.categoria
+      ? Object.keys(CATEGORY_MAP).includes(produto.categoria)
+      : false
+    if (produto.categoria && !isKnownCat) {
+      setIsNovaCategoria(true)
+    } else {
+      setIsNovaCategoria(false)
+    }
+    setForm({
+      ...form,
+      categoria: produto.categoria || '',
+      codCategoria: produto.cod_categoria || '',
+      codProduto: produto.codigo || '',
+      codFabrica: produto.cod_fabrica || '',
+      marca: produto.marca || '',
+      nome: produto.nome || '',
+      capacidade: produto.capacidade || '',
+      portas: produto.portas || '',
+      cor: produto.cor || '',
+      observacoes: produto.observacoes || '',
+      voltagem: produto.voltagem || '',
+      custoUnitario: Number(produto.custo_unitario) || 0,
+      imposto1: Number(produto.imposto1) || 0,
+      imposto2: Number(produto.imposto2) || 0,
+      imagemUrl: produto.imagem_url || '',
+    })
+    setBusca('')
+    setShowSugestoes(false)
+  }
 
   const handleBusca = async () => {
     if (!busca) return
@@ -201,14 +276,49 @@ export function ProdutoForm({
           </div>
 
           <div className="flex-1 space-y-6">
-            <div className="flex gap-2 w-full lg:w-1/2">
-              <Input
-                placeholder="Buscar por Nome ou Código..."
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleBusca()}
-                className="bg-[#F5F5F7] border-[#D1D1D1]"
-              />
+            <div className="flex gap-2 w-full lg:w-1/2 relative" ref={wrapperRef}>
+              <div className="relative w-full">
+                <Input
+                  placeholder="Buscar por Nome ou Código..."
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleBusca()}
+                  onFocus={() => {
+                    if (busca.trim().length >= 2) setShowSugestoes(true)
+                  }}
+                  className="bg-[#F5F5F7] border-[#D1D1D1] w-full"
+                />
+                {showSugestoes && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-[#D1D1D1] rounded-md shadow-lg max-h-60 overflow-auto">
+                    {isSearching ? (
+                      <div className="p-3 text-sm text-muted-foreground text-center">
+                        Buscando...
+                      </div>
+                    ) : sugestoes.length > 0 ? (
+                      <ul className="py-1">
+                        {sugestoes.map((prod) => (
+                          <li
+                            key={prod.id}
+                            onClick={() => selecionarProduto(prod)}
+                            className="px-3 py-2 hover:bg-[#F5F5F7] cursor-pointer text-sm flex flex-col transition-colors"
+                          >
+                            <span className="font-medium text-foreground">{prod.nome}</span>
+                            {prod.codigo && (
+                              <span className="text-xs text-muted-foreground">
+                                Cód: {prod.codigo}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="p-3 text-sm text-muted-foreground text-center">
+                        Nenhum produto encontrado.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <Button
                 type="button"
                 onClick={handleBusca}
