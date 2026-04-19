@@ -10,13 +10,14 @@ import {
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Search, UserPlus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Search } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import { ClienteFormSheet } from './clientes/ClienteFormSheet'
 
 export default function Clientes() {
   const [clientes, setClientes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     const fetchClientes = async () => {
@@ -31,6 +32,11 @@ export default function Clientes() {
     fetchClientes()
   }, [])
 
+  const filteredClientes = clientes.filter((c) => {
+    const s = search.toLowerCase()
+    return c.nome?.toLowerCase().includes(s) || c.email?.toLowerCase().includes(s)
+  })
+
   return (
     <div className="space-y-6 animate-fade-in-up">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -42,9 +48,7 @@ export default function Clientes() {
             Base de dados e histórico de relacionamento.
           </p>
         </div>
-        <Button className="shadow-subtle hover:-translate-y-0.5 transition-transform rounded-lg gap-2">
-          <UserPlus className="w-4 h-4" /> Novo Cliente
-        </Button>
+        <ClienteFormSheet onSuccess={(c) => setClientes([c, ...clientes])} />
       </div>
 
       <Card className="border-[#D1D1D1] shadow-subtle bg-white">
@@ -55,6 +59,8 @@ export default function Clientes() {
             <Input
               placeholder="Buscar por nome ou e-mail..."
               className="pl-9 bg-[#F5F5F7] border-[#D1D1D1]"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
         </CardHeader>
@@ -77,14 +83,14 @@ export default function Clientes() {
                       Carregando clientes...
                     </TableCell>
                   </TableRow>
-                ) : clientes.length === 0 ? (
+                ) : filteredClientes.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       Nenhum cliente encontrado.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  clientes.map((c) => (
+                  filteredClientes.map((c) => (
                     <TableRow
                       key={c.id}
                       className="border-[#D1D1D1] hover:bg-[#F5F5F7]/50 transition-colors"
