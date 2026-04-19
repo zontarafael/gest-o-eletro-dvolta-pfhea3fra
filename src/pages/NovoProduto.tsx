@@ -91,6 +91,7 @@ export default function NovoProduto() {
         valor_frete_unitario: freteUnitario,
         fornecedor_id: fornecedorId,
         lote,
+        imagem_url: p.imagemUrl || null,
       }
     })
 

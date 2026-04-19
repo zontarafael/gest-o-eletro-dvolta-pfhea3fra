@@ -10,8 +10,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Search, Plus } from 'lucide-react'
+import { Search, Plus, Image as ImageIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import { useToast } from '@/hooks/use-toast'
 
 export function ProdutoForm({
   freteTotal,
@@ -22,8 +23,12 @@ export function ProdutoForm({
   totalOutrosCusto: number
   onAdd: (p: any) => void
 }) {
+  const { toast } = useToast()
   const [busca, setBusca] = useState('')
-  const [form, setForm] = useState({
+  const [produtoEncontrado, setProdutoEncontrado] = useState<any>(null)
+  const [uploading, setUploading] = useState(false)
+
+  const defaultForm = {
     categoria: '',
     codCategoria: '',
     codProduto: '',
@@ -39,7 +44,10 @@ export function ProdutoForm({
     custoUnitario: 0,
     imposto1: 0,
     imposto2: 0,
-  })
+    imagemUrl: '',
+  }
+
+  const [form, setForm] = useState(defaultForm)
 
   const handleBusca = async () => {
     if (!busca) return
@@ -51,6 +59,7 @@ export function ProdutoForm({
       .single()
 
     if (data) {
+      setProdutoEncontrado(data)
       setForm({
         ...form,
         categoria: data.categoria || '',
@@ -67,7 +76,53 @@ export function ProdutoForm({
         custoUnitario: Number(data.custo_unitario) || 0,
         imposto1: Number(data.imposto1) || 0,
         imposto2: Number(data.imposto2) || 0,
+        imagemUrl: data.imagem_url || '',
       })
+    } else {
+      toast({
+        title: 'Não encontrado',
+        description: 'Produto não localizado na base.',
+        variant: 'destructive',
+      })
+      setProdutoEncontrado(null)
+    }
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Date.now()}-${Math.random()}.${fileExt}`
+
+      const { error: uploadError } = await supabase.storage.from('produtos').upload(fileName, file)
+
+      if (uploadError) throw uploadError
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('produtos').getPublicUrl(fileName)
+
+      if (produtoEncontrado?.id) {
+        await supabase
+          .from('produtos')
+          .update({ imagem_url: publicUrl })
+          .eq('id', produtoEncontrado.id)
+      }
+
+      setForm((prev) => ({ ...prev, imagemUrl: publicUrl }))
+      toast({ title: 'Sucesso', description: 'Foto carregada com sucesso!' })
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: 'Erro',
+        description: 'Erro ao fazer upload da foto',
+        variant: 'destructive',
+      })
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -79,24 +134,9 @@ export function ProdutoForm({
   const handleAdd = () => {
     if (!form.nome || form.quantidade <= 0) return
     onAdd({ ...form, id: Date.now().toString() })
-    setForm({
-      categoria: '',
-      codCategoria: '',
-      codProduto: '',
-      codFabrica: '',
-      marca: '',
-      nome: '',
-      capacidade: '',
-      portas: '',
-      cor: '',
-      observacoes: '',
-      voltagem: '',
-      quantidade: 1,
-      custoUnitario: 0,
-      imposto1: 0,
-      imposto2: 0,
-    })
+    setForm(defaultForm)
     setBusca('')
+    setProdutoEncontrado(null)
   }
 
   return (
@@ -105,196 +145,235 @@ export function ProdutoForm({
         <CardTitle className="text-lg text-foreground">Produto / Item da Nota</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex gap-2 w-full md:w-1/2">
-          <Input
-            placeholder="Buscar por Nome ou Código..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleBusca()}
-            className="bg-[#F5F5F7] border-[#D1D1D1]"
-          />
-          <Button
-            type="button"
-            onClick={handleBusca}
-            variant="secondary"
-            className="border-[#D1D1D1]"
-          >
-            <Search className="w-4 h-4 mr-2" /> Buscar
-          </Button>
-        </div>
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="flex-shrink-0 flex flex-col items-center gap-3">
+            <div className="w-32 h-32 border border-[#D1D1D1] rounded-lg overflow-hidden bg-[#F5F5F7] flex items-center justify-center relative group">
+              {form.imagemUrl ? (
+                <img src={form.imagemUrl} alt="Produto" className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-muted-foreground opacity-50 p-2 text-center">
+                  <ImageIcon className="w-8 h-8 mb-1" />
+                  <span className="text-xs font-medium leading-tight">Sem Foto</span>
+                </div>
+              )}
+            </div>
+            <div className="relative w-full">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full text-xs h-8 border-[#D1D1D1] shadow-subtle"
+                disabled={uploading}
+              >
+                {uploading ? 'Enviando...' : form.imagemUrl ? 'Trocar Foto' : 'Adicionar Foto'}
+              </Button>
+              <Input
+                type="file"
+                accept="image/*"
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                onChange={handleFileUpload}
+                disabled={uploading}
+                title="Adicionar ou trocar foto"
+              />
+            </div>
+          </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <div className="space-y-1">
-            <Label>Categoria</Label>
-            <Select
-              value={form.categoria}
-              onValueChange={(v) => setForm({ ...form, categoria: v })}
-            >
-              <SelectTrigger className="bg-[#F5F5F7] border-[#D1D1D1]">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {[
-                  'Geladeira',
-                  'Lava-louça',
-                  'Secadora de roupas',
-                  'Máquina de lavar roupas',
-                  'Cervejeira',
-                  'Adega',
-                  'Purificador de água',
-                  'Freezer',
-                  'Ar condicionado',
-                  'Cortina de ar',
-                  'Coifa',
-                ].map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label>Cód. Categoria</Label>
-            <Input
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-              value={form.codCategoria}
-              onChange={(e) => setForm({ ...form, codCategoria: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Cód. Produto</Label>
-            <Input
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-              value={form.codProduto}
-              onChange={(e) => setForm({ ...form, codProduto: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Cód. Fábrica</Label>
-            <Input
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-              value={form.codFabrica}
-              onChange={(e) => setForm({ ...form, codFabrica: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1 lg:col-span-2">
-            <Label>Nome do Produto</Label>
-            <Input
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-              value={form.nome}
-              onChange={(e) => setForm({ ...form, nome: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Marca</Label>
-            <Input
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-              value={form.marca}
-              onChange={(e) => setForm({ ...form, marca: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Capacidade/Tamanho</Label>
-            <Input
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-              value={form.capacidade}
-              onChange={(e) => setForm({ ...form, capacidade: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Portas/Outros</Label>
-            <Input
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-              value={form.portas}
-              onChange={(e) => setForm({ ...form, portas: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Cor</Label>
-            <Select value={form.cor} onValueChange={(v) => setForm({ ...form, cor: v })}>
-              <SelectTrigger className="bg-[#F5F5F7] border-[#D1D1D1]">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {[
-                  'Inox',
-                  'Inox Preto',
-                  'Preto',
-                  'Preto Fosco',
-                  'Branco',
-                  'Azul',
-                  'Vermelha',
-                  'Amarela',
-                  'Cinza',
-                  'Outros',
-                ].map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label>Voltagem</Label>
-            <Select value={form.voltagem} onValueChange={(v) => setForm({ ...form, voltagem: v })}>
-              <SelectTrigger className="bg-[#F5F5F7] border-[#D1D1D1]">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {['110V', '220V', 'Automático'].map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label>Qtd.</Label>
-            <Input
-              type="number"
-              min="1"
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-              value={form.quantidade}
-              onChange={(e) => setForm({ ...form, quantidade: Number(e.target.value) })}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Custo Unitário (R$)</Label>
-            <Input
-              type="number"
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-              value={form.custoUnitario}
-              onChange={(e) => setForm({ ...form, custoUnitario: Number(e.target.value) })}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Imposto 1 (%)</Label>
-            <Input
-              type="number"
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-              value={form.imposto1}
-              onChange={(e) => setForm({ ...form, imposto1: Number(e.target.value) })}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Imposto 2 (%)</Label>
-            <Input
-              type="number"
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-              value={form.imposto2}
-              onChange={(e) => setForm({ ...form, imposto2: Number(e.target.value) })}
-            />
-          </div>
-          <div className="space-y-1 lg:col-span-4">
-            <Label>Observações</Label>
-            <Input
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-              value={form.observacoes}
-              onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
-            />
+          <div className="flex-1 space-y-6">
+            <div className="flex gap-2 w-full lg:w-1/2">
+              <Input
+                placeholder="Buscar por Nome ou Código..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleBusca()}
+                className="bg-[#F5F5F7] border-[#D1D1D1]"
+              />
+              <Button
+                type="button"
+                onClick={handleBusca}
+                variant="secondary"
+                className="border-[#D1D1D1]"
+              >
+                <Search className="w-4 h-4 mr-2" /> Buscar
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <Label>Categoria</Label>
+                <Select
+                  value={form.categoria}
+                  onValueChange={(v) => setForm({ ...form, categoria: v })}
+                >
+                  <SelectTrigger className="bg-[#F5F5F7] border-[#D1D1D1]">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      'Geladeira',
+                      'Lava-louça',
+                      'Secadora de roupas',
+                      'Máquina de lavar roupas',
+                      'Cervejeira',
+                      'Adega',
+                      'Purificador de água',
+                      'Freezer',
+                      'Ar condicionado',
+                      'Cortina de ar',
+                      'Coifa',
+                    ].map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Cód. Categoria</Label>
+                <Input
+                  className="bg-[#F5F5F7] border-[#D1D1D1]"
+                  value={form.codCategoria}
+                  onChange={(e) => setForm({ ...form, codCategoria: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Cód. Produto</Label>
+                <Input
+                  className="bg-[#F5F5F7] border-[#D1D1D1]"
+                  value={form.codProduto}
+                  onChange={(e) => setForm({ ...form, codProduto: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Cód. Fábrica</Label>
+                <Input
+                  className="bg-[#F5F5F7] border-[#D1D1D1]"
+                  value={form.codFabrica}
+                  onChange={(e) => setForm({ ...form, codFabrica: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1 xl:col-span-2">
+                <Label>Nome do Produto</Label>
+                <Input
+                  className="bg-[#F5F5F7] border-[#D1D1D1]"
+                  value={form.nome}
+                  onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Marca</Label>
+                <Input
+                  className="bg-[#F5F5F7] border-[#D1D1D1]"
+                  value={form.marca}
+                  onChange={(e) => setForm({ ...form, marca: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Capacidade/Tamanho</Label>
+                <Input
+                  className="bg-[#F5F5F7] border-[#D1D1D1]"
+                  value={form.capacidade}
+                  onChange={(e) => setForm({ ...form, capacidade: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Portas/Outros</Label>
+                <Input
+                  className="bg-[#F5F5F7] border-[#D1D1D1]"
+                  value={form.portas}
+                  onChange={(e) => setForm({ ...form, portas: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Cor</Label>
+                <Select value={form.cor} onValueChange={(v) => setForm({ ...form, cor: v })}>
+                  <SelectTrigger className="bg-[#F5F5F7] border-[#D1D1D1]">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      'Inox',
+                      'Inox Preto',
+                      'Preto',
+                      'Preto Fosco',
+                      'Branco',
+                      'Azul',
+                      'Vermelha',
+                      'Amarela',
+                      'Cinza',
+                      'Outros',
+                    ].map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Voltagem</Label>
+                <Select
+                  value={form.voltagem}
+                  onValueChange={(v) => setForm({ ...form, voltagem: v })}
+                >
+                  <SelectTrigger className="bg-[#F5F5F7] border-[#D1D1D1]">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['110V', '220V', 'Automático'].map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Qtd.</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  className="bg-[#F5F5F7] border-[#D1D1D1]"
+                  value={form.quantidade}
+                  onChange={(e) => setForm({ ...form, quantidade: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Custo Unitário (R$)</Label>
+                <Input
+                  type="number"
+                  className="bg-[#F5F5F7] border-[#D1D1D1]"
+                  value={form.custoUnitario}
+                  onChange={(e) => setForm({ ...form, custoUnitario: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Imposto 1 (%)</Label>
+                <Input
+                  type="number"
+                  className="bg-[#F5F5F7] border-[#D1D1D1]"
+                  value={form.imposto1}
+                  onChange={(e) => setForm({ ...form, imposto1: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Imposto 2 (%)</Label>
+                <Input
+                  type="number"
+                  className="bg-[#F5F5F7] border-[#D1D1D1]"
+                  value={form.imposto2}
+                  onChange={(e) => setForm({ ...form, imposto2: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-1 xl:col-span-3">
+                <Label>Observações</Label>
+                <Input
+                  className="bg-[#F5F5F7] border-[#D1D1D1]"
+                  value={form.observacoes}
+                  onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
