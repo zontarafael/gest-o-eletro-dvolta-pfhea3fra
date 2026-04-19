@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -8,43 +9,37 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ArrowUpRight, ArrowDownRight, Wallet, Activity } from 'lucide-react'
-
-const transacoes = [
-  {
-    id: 1,
-    desc: 'Pagamento Fornecedor Alpha',
-    tipo: 'Despesa',
-    valor: 'R$ 4.500,00',
-    data: '15 Nov 2023',
-    status: 'Liquidado',
-  },
-  {
-    id: 2,
-    desc: 'Recebimento NF 1024 (Empresa X)',
-    tipo: 'Receita',
-    valor: 'R$ 12.300,00',
-    data: '14 Nov 2023',
-    status: 'Liquidado',
-  },
-  {
-    id: 3,
-    desc: 'Conta de Energia Elétrica',
-    tipo: 'Despesa',
-    valor: 'R$ 850,00',
-    data: '10 Nov 2023',
-    status: 'Liquidado',
-  },
-  {
-    id: 4,
-    desc: 'Recebimento NF 1025',
-    tipo: 'Receita',
-    valor: 'R$ 2.400,00',
-    data: '08 Nov 2023',
-    status: 'Pendente',
-  },
-]
+import { supabase } from '@/lib/supabase/client'
 
 export default function Financeiro() {
+  const [transacoes, setTransacoes] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [metrics, setMetrics] = useState({ saldo: 0, receitas: 0, despesas: 0 })
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data } = await supabase
+        .from('movimentacoes_financeiras')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (data) {
+        setTransacoes(data)
+
+        let r = 0,
+          d = 0
+        data.forEach((t) => {
+          if (t.tipo === 'Receita') r += Number(t.valor)
+          if (t.tipo === 'Despesa') d += Number(t.valor)
+        })
+        // Mock a base balance
+        setMetrics({ saldo: 142050 + r - d, receitas: r, despesas: d })
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [])
+
   return (
     <div className="space-y-6 animate-fade-in-up">
       <div>
@@ -58,34 +53,40 @@ export default function Financeiro() {
         <Card className="border-[#D1D1D1] shadow-subtle bg-white hover:-translate-y-1 transition-transform">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-semibold text-muted-foreground">
-              Saldo em Conta
+              Saldo Estimado
             </CardTitle>
             <Wallet className="w-4 h-4 text-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ 142.050,00</div>
+            <div className="text-2xl font-bold">
+              R$ {metrics.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
           </CardContent>
         </Card>
         <Card className="border-[#D1D1D1] shadow-subtle bg-white hover:-translate-y-1 transition-transform">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-semibold text-muted-foreground">
-              Receitas (Mês)
+              Receitas Realizadas
             </CardTitle>
             <ArrowUpRight className="w-4 h-4 text-[#10B981]" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#10B981]">R$ 45.200,00</div>
+            <div className="text-2xl font-bold text-[#10B981]">
+              R$ {metrics.receitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
           </CardContent>
         </Card>
         <Card className="border-[#D1D1D1] shadow-subtle bg-white hover:-translate-y-1 transition-transform">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-semibold text-muted-foreground">
-              Despesas (Mês)
+              Despesas Realizadas
             </CardTitle>
             <ArrowDownRight className="w-4 h-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">R$ 18.400,00</div>
+            <div className="text-2xl font-bold text-destructive">
+              R$ {metrics.despesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
           </CardContent>
         </Card>
         <Card className="border-[#D1D1D1] shadow-subtle bg-white hover:-translate-y-1 transition-transform">
@@ -115,25 +116,41 @@ export default function Financeiro() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transacoes.map((t) => (
-                  <TableRow key={t.id} className="border-[#D1D1D1] hover:bg-[#F5F5F7]/50">
-                    <TableCell className="font-medium text-foreground">{t.desc}</TableCell>
-                    <TableCell className="text-muted-foreground">{t.data}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`text-xs px-2 py-1 rounded-full font-medium ${t.status === 'Liquidado' ? 'bg-[#10B981]/10 text-[#10B981]' : 'bg-[#F59E0B]/10 text-[#F59E0B]'}`}
-                      >
-                        {t.status}
-                      </span>
-                    </TableCell>
-                    <TableCell
-                      className={`text-right font-bold tracking-tight ${t.tipo === 'Receita' ? 'text-[#10B981]' : 'text-foreground'}`}
-                    >
-                      {t.tipo === 'Receita' ? '+ ' : '- '}
-                      {t.valor}
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      Carregando movimentações...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : transacoes.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      Nenhuma movimentação registrada.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  transacoes.map((t) => (
+                    <TableRow key={t.id} className="border-[#D1D1D1] hover:bg-[#F5F5F7]/50">
+                      <TableCell className="font-medium text-foreground">{t.descricao}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(t.data_movimentacao).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full font-medium ${t.status === 'Liquidado' ? 'bg-[#10B981]/10 text-[#10B981]' : 'bg-[#F59E0B]/10 text-[#F59E0B]'}`}
+                        >
+                          {t.status}
+                        </span>
+                      </TableCell>
+                      <TableCell
+                        className={`text-right font-bold tracking-tight ${t.tipo === 'Receita' ? 'text-[#10B981]' : 'text-foreground'}`}
+                      >
+                        {t.tipo === 'Receita' ? '+ ' : '- '}
+                        R$ {Number(t.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

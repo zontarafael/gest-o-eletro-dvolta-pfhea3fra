@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Search, Plus } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
 
 export function ProdutoForm({
   freteTotal,
@@ -40,21 +41,32 @@ export function ProdutoForm({
     imposto2: 0,
   })
 
-  const handleBusca = () => {
-    if (busca.toLowerCase().includes('geladeira') || busca === '123') {
+  const handleBusca = async () => {
+    if (!busca) return
+    const { data } = await supabase
+      .from('produtos')
+      .select('*')
+      .or(`nome.ilike.%${busca}%,codigo.ilike.%${busca}%`)
+      .limit(1)
+      .single()
+
+    if (data) {
       setForm({
         ...form,
-        categoria: 'Geladeira',
-        codCategoria: 'GEL',
-        codProduto: 'GEL-1001',
-        codFabrica: 'FB-992',
-        marca: 'Brastemp',
-        nome: 'Geladeira Frost Free 400L',
-        capacidade: '400L',
-        portas: '2',
-        voltagem: '220V',
-        cor: 'Inox',
-        custoUnitario: 2500,
+        categoria: data.categoria || '',
+        codCategoria: data.cod_categoria || '',
+        codProduto: data.codigo || '',
+        codFabrica: data.cod_fabrica || '',
+        marca: data.marca || '',
+        nome: data.nome || '',
+        capacidade: data.capacidade || '',
+        portas: data.portas || '',
+        cor: data.cor || '',
+        observacoes: data.observacoes || '',
+        voltagem: data.voltagem || '',
+        custoUnitario: Number(data.custo_unitario) || 0,
+        imposto1: Number(data.imposto1) || 0,
+        imposto2: Number(data.imposto2) || 0,
       })
     }
   }
@@ -98,9 +110,15 @@ export function ProdutoForm({
             placeholder="Buscar por Nome ou Código..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleBusca()}
             className="bg-[#F5F5F7] border-[#D1D1D1]"
           />
-          <Button onClick={handleBusca} variant="secondary" className="border-[#D1D1D1]">
+          <Button
+            type="button"
+            onClick={handleBusca}
+            variant="secondary"
+            className="border-[#D1D1D1]"
+          >
             <Search className="w-4 h-4 mr-2" /> Buscar
           </Button>
         </div>
@@ -160,7 +178,6 @@ export function ProdutoForm({
               onChange={(e) => setForm({ ...form, codFabrica: e.target.value })}
             />
           </div>
-
           <div className="space-y-1 lg:col-span-2">
             <Label>Nome do Produto</Label>
             <Input
@@ -185,7 +202,6 @@ export function ProdutoForm({
               onChange={(e) => setForm({ ...form, capacidade: e.target.value })}
             />
           </div>
-
           <div className="space-y-1">
             <Label>Portas/Outros</Label>
             <Input
@@ -245,7 +261,6 @@ export function ProdutoForm({
               onChange={(e) => setForm({ ...form, quantidade: Number(e.target.value) })}
             />
           </div>
-
           <div className="space-y-1">
             <Label>Custo Unitário (R$)</Label>
             <Input
@@ -288,7 +303,11 @@ export function ProdutoForm({
             Frete Unitário Calculado:{' '}
             <span className="text-primary font-bold ml-1">R$ {freteUnitario.toFixed(2)}</span>
           </div>
-          <Button onClick={handleAdd} className="gap-2 shadow-subtle w-full sm:w-auto">
+          <Button
+            type="button"
+            onClick={handleAdd}
+            className="gap-2 shadow-subtle w-full sm:w-auto"
+          >
             <Plus className="w-4 h-4" /> Adicionar à Entrada
           </Button>
         </div>

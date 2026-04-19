@@ -9,7 +9,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { CreditCard } from 'lucide-react'
 
-export function PagamentoSection() {
+export function PagamentoSection({ onChange }: { onChange?: (v: string) => void }) {
   return (
     <Card className="border-[#D1D1D1] shadow-subtle bg-white">
       <CardHeader className="pb-4">
@@ -20,7 +20,7 @@ export function PagamentoSection() {
       <CardContent>
         <div className="space-y-2">
           <Label>Opção de Pagamento</Label>
-          <Select defaultValue="vista">
+          <Select defaultValue="vista" onValueChange={onChange}>
             <SelectTrigger className="w-full bg-[#F5F5F7] border-[#D1D1D1]">
               <SelectValue placeholder="Selecione a forma de pagamento" />
             </SelectTrigger>

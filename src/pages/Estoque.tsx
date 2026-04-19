@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -11,28 +12,25 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Plus, PackageSearch } from 'lucide-react'
 import { Link } from 'react-router-dom'
-
-const produtos = [
-  {
-    id: 'PRD-001',
-    nome: 'Smart TV 55" OLED',
-    categoria: 'Eletrodomésticos',
-    qtd: 45,
-    status: 'Normal',
-  },
-  { id: 'PRD-002', nome: 'Notebook Pro 15', categoria: 'Eletrônicos', qtd: 8, status: 'Baixo' },
-  { id: 'PRD-003', nome: 'Cabo HDMI 2m', categoria: 'Acessórios', qtd: 150, status: 'Normal' },
-  {
-    id: 'PRD-004',
-    nome: 'Ar Condicionado 12000 BTUs',
-    categoria: 'Eletrodomésticos',
-    qtd: 2,
-    status: 'Crítico',
-  },
-  { id: 'PRD-005', nome: 'Monitor Curvo 27"', categoria: 'Eletrônicos', qtd: 24, status: 'Normal' },
-]
+import { supabase } from '@/lib/supabase/client'
 
 export default function Estoque() {
+  const [produtos, setProdutos] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchProdutos = async () => {
+      const { data } = await supabase
+        .from('produtos')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (data) setProdutos(data)
+      setLoading(false)
+    }
+    fetchProdutos()
+  }, [])
+
   return (
     <div className="space-y-6 animate-fade-in-up">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -73,28 +71,44 @@ export default function Estoque() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {produtos.map((p) => (
-                  <TableRow key={p.id} className="border-[#D1D1D1] hover:bg-[#F5F5F7]/50">
-                    <TableCell className="font-medium text-muted-foreground">{p.id}</TableCell>
-                    <TableCell className="font-semibold text-foreground">{p.nome}</TableCell>
-                    <TableCell>{p.categoria}</TableCell>
-                    <TableCell className="font-bold">{p.qtd}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={`font-semibold ${
-                          p.status === 'Normal'
-                            ? 'border-[#10B981] text-[#10B981] bg-[#10B981]/10'
-                            : p.status === 'Baixo'
-                              ? 'border-[#F59E0B] text-[#F59E0B] bg-[#F59E0B]/10'
-                              : 'border-destructive text-destructive bg-destructive/10'
-                        }`}
-                      >
-                        {p.status}
-                      </Badge>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      Carregando catálogo...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : produtos.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      Nenhum produto cadastrado no estoque.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  produtos.map((p) => (
+                    <TableRow key={p.id} className="border-[#D1D1D1] hover:bg-[#F5F5F7]/50">
+                      <TableCell className="font-medium text-muted-foreground">
+                        {p.codigo}
+                      </TableCell>
+                      <TableCell className="font-semibold text-foreground">{p.nome}</TableCell>
+                      <TableCell>{p.categoria}</TableCell>
+                      <TableCell className="font-bold">{p.quantidade}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={`font-semibold ${
+                            p.status === 'Normal'
+                              ? 'border-[#10B981] text-[#10B981] bg-[#10B981]/10'
+                              : p.status === 'Baixo'
+                                ? 'border-[#F59E0B] text-[#F59E0B] bg-[#F59E0B]/10'
+                                : 'border-destructive text-destructive bg-destructive/10'
+                          }`}
+                        >
+                          {p.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

@@ -9,27 +9,87 @@ import { useToast } from '@/hooks/use-toast'
 import { FornecedorForm } from '@/components/estoque/FornecedorForm'
 import { ProdutoForm } from '@/components/estoque/ProdutoForm'
 import { ProdutosList } from '@/components/estoque/ProdutosList'
+import { supabase } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function NovoProduto() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { user } = useAuth()
 
   const [freteTotal, setFreteTotal] = useState(0)
   const [notaFiscal, setNotaFiscal] = useState('')
   const [produtos, setProdutos] = useState<any[]>([])
   const [fornecedor, setFornecedor] = useState<any>({})
+  const [loading, setLoading] = useState(false)
 
   const totalCustoProdutos = useMemo(
     () => produtos.reduce((acc, p) => acc + p.quantidade * p.custoUnitario, 0),
     [produtos],
   )
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!user) return
+    setLoading(true)
+
+    let fornecedorId = fornecedor.id
+    if (!fornecedorId && fornecedor.nome) {
+      const { data: newForn } = await supabase
+        .from('fornecedores')
+        .insert({
+          user_id: user.id,
+          nome: fornecedor.nome,
+          documento: fornecedor.documento,
+          rua: fornecedor.rua,
+          numero: fornecedor.numero,
+          bairro: fornecedor.bairro,
+          referencia: fornecedor.referencia,
+          cidade: fornecedor.cidade,
+          estado: fornecedor.estado,
+          cep: fornecedor.cep,
+          email: fornecedor.email,
+          telefones: fornecedor.telefones,
+        })
+        .select()
+        .single()
+      if (newForn) fornecedorId = newForn.id
+    }
+
+    const produtosToInsert = produtos.map((p) => {
+      const custoTotalItem = p.quantidade * p.custoUnitario
+      const proporcao = totalCustoProdutos > 0 ? custoTotalItem / totalCustoProdutos : 0
+      const freteUnitario = p.quantidade > 0 ? (freteTotal * proporcao) / p.quantidade : 0
+
+      return {
+        user_id: user.id,
+        codigo: p.codProduto,
+        cod_categoria: p.codCategoria,
+        cod_fabrica: p.codFabrica,
+        marca: p.marca,
+        nome: p.nome,
+        categoria: p.categoria,
+        capacidade: p.capacidade,
+        portas: p.portas,
+        cor: p.cor,
+        voltagem: p.voltagem,
+        observacoes: p.observacoes,
+        quantidade: p.quantidade,
+        custo_unitario: p.custoUnitario,
+        imposto1: p.imposto1,
+        imposto2: p.imposto2,
+        valor_frete_unitario: freteUnitario,
+        fornecedor_id: fornecedorId,
+      }
+    })
+
+    await supabase.from('produtos').insert(produtosToInsert)
+
+    setLoading(false)
     toast({
       title: 'Entrada Registrada',
       description: 'O estoque foi atualizado com sucesso no sistema.',
     })
-    setTimeout(() => navigate('/estoque'), 1500)
+    navigate('/estoque')
   }
 
   const handlePrintLabel = () =>
@@ -87,13 +147,11 @@ export default function NovoProduto() {
       </Card>
 
       <FornecedorForm onChange={setFornecedor} />
-
       <ProdutoForm
         freteTotal={freteTotal}
         totalOutrosCusto={totalCustoProdutos}
         onAdd={(p) => setProdutos([...produtos, p])}
       />
-
       <ProdutosList produtos={produtos} freteTotal={freteTotal} totalCusto={totalCustoProdutos} />
 
       {produtos.length > 0 && (
@@ -104,7 +162,7 @@ export default function NovoProduto() {
               onClick={handlePrintLabel}
               className="shadow-subtle gap-2 bg-white border-[#D1D1D1] flex-1 sm:flex-none"
             >
-              <Printer className="w-4 h-4" /> Etiqueta do Produto
+              <Printer className="w-4 h-4" /> Etiqueta
             </Button>
             <Button
               variant="outline"
@@ -116,9 +174,10 @@ export default function NovoProduto() {
           </div>
           <Button
             onClick={handleSave}
+            disabled={loading}
             className="gap-2 shadow-subtle px-8 w-full sm:w-auto transition-transform hover:-translate-y-0.5"
           >
-            <Save className="w-5 h-5" /> Salvar Entrada
+            <Save className="w-5 h-5" /> {loading ? 'Salvando...' : 'Salvar Entrada'}
           </Button>
         </div>
       )}

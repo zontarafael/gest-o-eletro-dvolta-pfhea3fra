@@ -4,10 +4,11 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Search, Plus, Trash2 } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
 
 export function FornecedorForm({ onChange }: { onChange: (data: any) => void }) {
   const [busca, setBusca] = useState('')
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<any>({
     nome: '',
     documento: '',
     rua: '',
@@ -21,24 +22,20 @@ export function FornecedorForm({ onChange }: { onChange: (data: any) => void }) 
   })
   const [telefones, setTelefones] = useState<string[]>([''])
 
-  const handleBusca = () => {
-    // Mock auto-fill logic for matching supplier
-    if (busca === '123' || busca.toLowerCase().includes('eletro')) {
-      const f = {
-        nome: 'Eletro Fornecedor S.A',
-        documento: '12.345.678/0001-90',
-        rua: 'Av. das Indústrias',
-        numero: '1000',
-        bairro: 'Distrito Industrial',
-        referencia: 'Galpão 4',
-        cidade: 'São Paulo',
-        estado: 'SP',
-        cep: '01000-000',
-        email: 'contato@eletro.com',
-      }
-      setForm(f)
-      setTelefones(['(11) 4002-8922'])
-      onChange({ ...f, telefones: ['(11) 4002-8922'] })
+  const handleBusca = async () => {
+    if (!busca) return
+    const { data } = await supabase
+      .from('fornecedores')
+      .select('*')
+      .or(`nome.ilike.%${busca}%,documento.ilike.%${busca}%`)
+      .limit(1)
+      .single()
+
+    if (data) {
+      setForm(data)
+      const tels = data.telefones && data.telefones.length > 0 ? data.telefones : ['']
+      setTelefones(tels)
+      onChange({ ...data, telefones: tels })
     }
   }
 
@@ -64,9 +61,15 @@ export function FornecedorForm({ onChange }: { onChange: (data: any) => void }) 
             placeholder="Buscar por Nome ou CPF/CNPJ..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleBusca()}
             className="bg-[#F5F5F7] border-[#D1D1D1]"
           />
-          <Button onClick={handleBusca} variant="secondary" className="border-[#D1D1D1]">
+          <Button
+            type="button"
+            onClick={handleBusca}
+            variant="secondary"
+            className="border-[#D1D1D1]"
+          >
             <Search className="w-4 h-4 mr-2" /> Buscar
           </Button>
         </div>
@@ -96,7 +99,6 @@ export function FornecedorForm({ onChange }: { onChange: (data: any) => void }) 
               onChange={(e) => updateForm('email', e.target.value)}
             />
           </div>
-
           <div className="space-y-1">
             <Label>CEP</Label>
             <Input
@@ -170,6 +172,7 @@ export function FornecedorForm({ onChange }: { onChange: (data: any) => void }) 
                   }}
                 />
                 <Button
+                  type="button"
                   variant="outline"
                   size="icon"
                   className="shrink-0 border-[#D1D1D1]"
@@ -184,6 +187,7 @@ export function FornecedorForm({ onChange }: { onChange: (data: any) => void }) 
             ))}
           </div>
           <Button
+            type="button"
             variant="ghost"
             size="sm"
             onClick={() => updateTelefones([...telefones, ''])}

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   AreaChart,
@@ -12,22 +13,7 @@ import {
   Tooltip as RechartsTooltip,
 } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-
-const areaData = [
-  { name: 'Jan', vendas: 4000, metas: 2400 },
-  { name: 'Fev', vendas: 3000, metas: 1398 },
-  { name: 'Mar', vendas: 2000, metas: 9800 },
-  { name: 'Abr', vendas: 2780, metas: 3908 },
-  { name: 'Mai', vendas: 1890, metas: 4800 },
-  { name: 'Jun', vendas: 2390, metas: 3800 },
-]
-
-const pieData = [
-  { name: 'Eletrônicos', value: 400 },
-  { name: 'Eletrodomésticos', value: 300 },
-  { name: 'Acessórios', value: 300 },
-  { name: 'Serviços', value: 200 },
-]
+import { supabase } from '@/lib/supabase/client'
 
 const chartConfig = {
   vendas: { label: 'Vendas Realizadas', color: 'hsl(var(--primary))' },
@@ -41,6 +27,33 @@ export function DashboardCharts({ module, period }: { module: string; period: st
     'hsl(var(--chart-3))',
     'hsl(var(--chart-4))',
   ]
+  const [areaData, setAreaData] = useState([{ name: 'Mês', vendas: 0, metas: 1000 }])
+  const [pieData, setPieData] = useState([{ name: 'Carregando', value: 100 }])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      // Very simple aggregation mock using real lengths
+      const { data: prods } = await supabase.from('produtos').select('categoria')
+      if (prods && prods.length > 0) {
+        const catMap: any = {}
+        prods.forEach((p) => {
+          const c = p.categoria || 'Outros'
+          catMap[c] = (catMap[c] || 0) + 1
+        })
+        setPieData(Object.keys(catMap).map((k) => ({ name: k, value: catMap[k] })))
+      }
+
+      setAreaData([
+        { name: 'Jan', vendas: 4000, metas: 2400 },
+        { name: 'Fev', vendas: 3000, metas: 1398 },
+        { name: 'Mar', vendas: 2000, metas: 9800 },
+        { name: 'Abr', vendas: 2780, metas: 3908 },
+        { name: 'Mai', vendas: 1890, metas: 4800 },
+        { name: 'Jun', vendas: 2390, metas: 3800 },
+      ])
+    }
+    fetchData()
+  }, [])
 
   return (
     <div
@@ -86,7 +99,6 @@ export function DashboardCharts({ module, period }: { module: string; period: st
           </ChartContainer>
         </CardContent>
       </Card>
-
       <Card className="shadow-sm border-border bg-card">
         <CardHeader>
           <CardTitle className="text-lg text-foreground">Distribuição por Categoria</CardTitle>

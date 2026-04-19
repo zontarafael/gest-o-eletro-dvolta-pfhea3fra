@@ -9,7 +9,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { FileSignature } from 'lucide-react'
 
-export function AssinaturaSection() {
+export function AssinaturaSection({ onChange }: { onChange?: (v: boolean) => void }) {
   return (
     <Card className="border-[#D1D1D1] shadow-subtle bg-white">
       <CardHeader className="pb-4">
@@ -20,7 +20,7 @@ export function AssinaturaSection() {
       <CardContent>
         <div className="space-y-2 max-w-md">
           <Label>Assinatura Digital Exigida</Label>
-          <Select defaultValue="nao">
+          <Select defaultValue="nao" onValueChange={(v) => onChange && onChange(v === 'sim')}>
             <SelectTrigger className="w-full bg-[#F5F5F7] border-[#D1D1D1]">
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>

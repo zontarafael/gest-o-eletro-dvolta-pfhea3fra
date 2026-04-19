@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -11,39 +12,36 @@ import { Badge } from '@/components/ui/badge'
 import { ShoppingBag, TrendingUp, Percent, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
-
-const pedidos = [
-  {
-    id: 'PED-001',
-    cliente: 'João Silva',
-    valor: 'R$ 1.500',
-    status: 'Concluído',
-    data: '10 Nov 2023',
-  },
-  {
-    id: 'PED-002',
-    cliente: 'Empresa X',
-    valor: 'R$ 8.900',
-    status: 'Em Processamento',
-    data: '12 Nov 2023',
-  },
-  {
-    id: 'PED-003',
-    cliente: 'Carlos Santos',
-    valor: 'R$ 350',
-    status: 'Cancelado',
-    data: '13 Nov 2023',
-  },
-  {
-    id: 'PED-004',
-    cliente: 'Maria Oliveira',
-    valor: 'R$ 4.200',
-    status: 'Concluído',
-    data: '14 Nov 2023',
-  },
-]
+import { supabase } from '@/lib/supabase/client'
 
 export default function Vendas() {
+  const [pedidos, setPedidos] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [metrics, setMetrics] = useState({ totalVendas: 0, ticketMedio: 0 })
+
+  useEffect(() => {
+    const fetchPedidos = async () => {
+      const { data } = await supabase
+        .from('vendas')
+        .select(`
+          *,
+          clientes ( nome )
+        `)
+        .order('created_at', { ascending: false })
+
+      if (data) {
+        setPedidos(data)
+        const total = data.reduce((acc, p) => acc + Number(p.valor_total || 0), 0)
+        setMetrics({
+          totalVendas: data.length,
+          ticketMedio: data.length > 0 ? total / data.length : 0,
+        })
+      }
+      setLoading(false)
+    }
+    fetchPedidos()
+  }, [])
+
   return (
     <div className="space-y-6 animate-fade-in-up">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -69,12 +67,12 @@ export default function Vendas() {
         <Card className="border-[#D1D1D1] shadow-subtle bg-white hover:-translate-y-1 transition-transform">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-semibold text-muted-foreground">
-              Vendas no Mês
+              Vendas Registradas
             </CardTitle>
             <ShoppingBag className="w-4 h-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">245</div>
+            <div className="text-3xl font-bold text-foreground">{metrics.totalVendas}</div>
           </CardContent>
         </Card>
         <Card className="border-[#D1D1D1] shadow-subtle bg-white hover:-translate-y-1 transition-transform">
@@ -85,7 +83,9 @@ export default function Vendas() {
             <TrendingUp className="w-4 h-4 text-[#10B981]" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">R$ 4.520</div>
+            <div className="text-3xl font-bold text-foreground">
+              R$ {metrics.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
           </CardContent>
         </Card>
         <Card className="border-[#D1D1D1] shadow-subtle bg-white hover:-translate-y-1 transition-transform">
@@ -110,7 +110,7 @@ export default function Vendas() {
             <Table>
               <TableHeader className="bg-[#F5F5F7]">
                 <TableRow className="border-[#D1D1D1]">
-                  <TableHead className="font-semibold">ID Pedido</TableHead>
+                  <TableHead className="font-semibold">Cód. Pedido</TableHead>
                   <TableHead className="font-semibold">Cliente</TableHead>
                   <TableHead className="font-semibold">Valor</TableHead>
                   <TableHead className="font-semibold">Data</TableHead>
@@ -118,28 +118,49 @@ export default function Vendas() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pedidos.map((p) => (
-                  <TableRow key={p.id} className="border-[#D1D1D1] hover:bg-[#F5F5F7]/50">
-                    <TableCell className="font-medium">{p.id}</TableCell>
-                    <TableCell>{p.cliente}</TableCell>
-                    <TableCell className="font-semibold">{p.valor}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.data}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={`font-medium ${
-                          p.status === 'Concluído'
-                            ? 'border-[#10B981] text-[#10B981] bg-[#10B981]/10'
-                            : p.status === 'Em Processamento'
-                              ? 'border-[#F59E0B] text-[#F59E0B] bg-[#F59E0B]/10'
-                              : 'border-destructive text-destructive bg-destructive/10'
-                        }`}
-                      >
-                        {p.status}
-                      </Badge>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      Carregando pedidos...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : pedidos.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      Nenhum pedido registrado.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  pedidos.map((p) => (
+                    <TableRow key={p.id} className="border-[#D1D1D1] hover:bg-[#F5F5F7]/50">
+                      <TableCell className="font-medium">{p.codigo}</TableCell>
+                      <TableCell>{p.clientes?.nome || 'Cliente Desconhecido'}</TableCell>
+                      <TableCell className="font-semibold">
+                        R${' '}
+                        {Number(p.valor_total).toLocaleString('pt-BR', {
+                          minimumFractionDigits: 2,
+                        })}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(p.data_venda).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={`font-medium ${
+                            p.status === 'Concluído'
+                              ? 'border-[#10B981] text-[#10B981] bg-[#10B981]/10'
+                              : p.status === 'Em Processamento'
+                                ? 'border-[#F59E0B] text-[#F59E0B] bg-[#F59E0B]/10'
+                                : 'border-destructive text-destructive bg-destructive/10'
+                          }`}
+                        >
+                          {p.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

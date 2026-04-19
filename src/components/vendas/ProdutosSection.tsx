@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Plus, Trash2, Package } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
 import {
   Table,
   TableBody,
@@ -13,45 +14,54 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-const MOCK_PRODUCTS = [
-  { id: 'PRD-001', nome: 'Smart TV 55" OLED', preco: 3500 },
-  { id: 'PRD-002', nome: 'Notebook Pro 15', preco: 7500 },
-  { id: 'PRD-003', nome: 'Cabo HDMI 2m', preco: 45 },
-  { id: 'PRD-004', nome: 'Ar Condicionado 12000 BTUs', preco: 2200 },
-  { id: 'PRD-005', nome: 'Monitor Curvo 27"', preco: 1800 },
-]
-
-export function ProdutosSection() {
+export function ProdutosSection({ onChange }: { onChange?: (p: any[]) => void }) {
   const [search, setSearch] = useState('')
   const [selectedProducts, setSelectedProducts] = useState<any[]>([])
 
-  const handleAddProduct = () => {
+  const handleAddProduct = async () => {
     if (!search.trim()) return
 
-    const found = MOCK_PRODUCTS.find((p) => p.nome.toLowerCase().includes(search.toLowerCase()))
-    if (found) {
-      setSelectedProducts([...selectedProducts, { ...found, qtd: 1, key: Date.now() }])
+    const { data } = await supabase
+      .from('produtos')
+      .select('*')
+      .ilike('nome', `%${search}%`)
+      .limit(1)
+      .single()
+
+    let newP
+    if (data) {
+      newP = {
+        id: data.id,
+        nome: data.nome,
+        preco: Number(data.custo_unitario) * 1.5,
+        qtd: 1,
+        key: Date.now(),
+      }
     } else {
-      setSelectedProducts([
-        ...selectedProducts,
-        { id: 'N/A', nome: search, preco: 0, qtd: 1, key: Date.now() },
-      ])
+      newP = { id: 'N/A', nome: search, preco: 0, qtd: 1, key: Date.now() }
     }
+
+    const newList = [...selectedProducts, newP]
+    setSelectedProducts(newList)
+    if (onChange) onChange(newList)
     setSearch('')
   }
 
+  const updateList = (newList: any[]) => {
+    setSelectedProducts(newList)
+    if (onChange) onChange(newList)
+  }
+
   const handleRemoveProduct = (key: number) => {
-    setSelectedProducts(selectedProducts.filter((p) => p.key !== key))
+    updateList(selectedProducts.filter((p) => p.key !== key))
   }
 
   const updateQtd = (key: number, qtd: number) => {
-    setSelectedProducts(
-      selectedProducts.map((p) => (p.key === key ? { ...p, qtd: Math.max(1, qtd) } : p)),
-    )
+    updateList(selectedProducts.map((p) => (p.key === key ? { ...p, qtd: Math.max(1, qtd) } : p)))
   }
 
   const updatePreco = (key: number, preco: number) => {
-    setSelectedProducts(
+    updateList(
       selectedProducts.map((p) => (p.key === key ? { ...p, preco: Math.max(0, preco) } : p)),
     )
   }
@@ -68,7 +78,7 @@ export function ProdutosSection() {
       <CardContent className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-2 items-end">
           <div className="space-y-2 flex-1 w-full">
-            <Label>Buscar Produto</Label>
+            <Label>Buscar Produto no Estoque</Label>
             <Input
               placeholder="Digite o nome do produto e tecle Enter..."
               value={search}
@@ -77,7 +87,11 @@ export function ProdutosSection() {
               className="bg-[#F5F5F7] border-[#D1D1D1]"
             />
           </div>
-          <Button onClick={handleAddProduct} className="gap-2 w-full sm:w-auto shadow-sm">
+          <Button
+            type="button"
+            onClick={handleAddProduct}
+            className="gap-2 w-full sm:w-auto shadow-sm"
+          >
             <Plus className="w-4 h-4" /> Adicionar
           </Button>
         </div>
@@ -124,6 +138,7 @@ export function ProdutosSection() {
                     </TableCell>
                     <TableCell>
                       <Button
+                        type="button"
                         variant="ghost"
                         size="icon"
                         onClick={() => handleRemoveProduct(p.key)}

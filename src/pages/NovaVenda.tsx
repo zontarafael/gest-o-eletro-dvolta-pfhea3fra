@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ClienteSection } from '@/components/vendas/ClienteSection'
 import { ProdutosSection } from '@/components/vendas/ProdutosSection'
@@ -8,17 +9,107 @@ import { ImpressoesSection } from '@/components/vendas/ImpressoesSection'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
+import { supabase } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function NovaVenda() {
   const { toast } = useToast()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
-  const handleSave = () => {
-    toast({
-      title: 'Venda Concluída',
-      description: 'A nova venda foi registrada com sucesso no sistema.',
-    })
-    setTimeout(() => navigate('/vendas'), 1500)
+  const [cliente, setCliente] = useState<any>(null)
+  const [produtos, setProdutos] = useState<any[]>([])
+  const [pagamento, setPagamento] = useState('vista')
+  const [assinatura, setAssinatura] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const handleSave = async () => {
+    if (!user) return
+    if (!cliente?.nome) {
+      toast({
+        title: 'Atenção',
+        description: 'Selecione ou cadastre um cliente.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (produtos.length === 0) {
+      toast({
+        title: 'Atenção',
+        description: 'Adicione pelo menos um produto.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setLoading(true)
+    let clienteId = cliente.id
+    if (!clienteId) {
+      const { data: newC } = await supabase
+        .from('clientes')
+        .insert({
+          user_id: user.id,
+          nome: cliente.nome,
+          documento: cliente.documento,
+          rua: cliente.rua,
+          numero: cliente.numero,
+          bairro: cliente.bairro,
+          referencia: cliente.referencia,
+          cidade: cliente.cidade,
+          estado: cliente.estado,
+          cep: cliente.cep,
+          email: cliente.email,
+          telefones: cliente.telefones,
+        })
+        .select()
+        .single()
+      if (newC) clienteId = newC.id
+    }
+
+    const total = produtos.reduce((acc, p) => acc + p.preco * p.qtd, 0)
+    const codigo = `PED-${Math.floor(1000 + Math.random() * 9000)}`
+
+    const { data: venda } = await supabase
+      .from('vendas')
+      .insert({
+        user_id: user.id,
+        cliente_id: clienteId,
+        valor_total: total,
+        status: 'Concluído',
+        forma_pagamento: pagamento,
+        assinatura_digital: assinatura,
+        codigo,
+      })
+      .select()
+      .single()
+
+    if (venda) {
+      const itens = produtos
+        .map((p) => ({
+          venda_id: venda.id,
+          produto_id: p.id !== 'N/A' ? p.id : null,
+          quantidade: p.qtd,
+          preco_unitario: p.preco,
+          subtotal: p.preco * p.qtd,
+        }))
+        .filter((i) => i.produto_id)
+
+      if (itens.length > 0) {
+        await supabase.from('venda_itens').insert(itens)
+      }
+
+      await supabase.from('movimentacoes_financeiras').insert({
+        user_id: user.id,
+        descricao: `Venda ${codigo} - ${cliente.nome}`,
+        tipo: 'Receita',
+        valor: total,
+        status: 'Liquidado',
+      })
+    }
+
+    setLoading(false)
+    toast({ title: 'Venda Registrada', description: 'Venda salva no banco de dados com sucesso.' })
+    navigate('/vendas')
   }
 
   return (
@@ -36,18 +127,16 @@ export default function NovaVenda() {
         </Button>
         <div>
           <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Nova Venda</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Registre um novo pedido de venda com facilidade.
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Registre um novo pedido de venda.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        <ClienteSection />
-        <ProdutosSection />
-        <TransporteSection />
-        <PagamentoSection />
-        <AssinaturaSection />
+        <ClienteSection onChange={setCliente} />
+        <ProdutosSection onChange={setProdutos} />
+        {TransporteSection && <TransporteSection />}
+        <PagamentoSection onChange={setPagamento} />
+        <AssinaturaSection onChange={setAssinatura} />
         <ImpressoesSection />
 
         <div className="flex justify-end gap-4 pt-6 mt-4 border-t border-[#D1D1D1]">
@@ -56,9 +145,10 @@ export default function NovaVenda() {
           </Button>
           <Button
             onClick={handleSave}
+            disabled={loading}
             className="gap-2 shadow-subtle px-8 transition-transform hover:-translate-y-0.5"
           >
-            <CheckCircle2 className="w-5 h-5" /> Finalizar Venda
+            <CheckCircle2 className="w-5 h-5" /> {loading ? 'Salvando...' : 'Finalizar Venda'}
           </Button>
         </div>
       </div>

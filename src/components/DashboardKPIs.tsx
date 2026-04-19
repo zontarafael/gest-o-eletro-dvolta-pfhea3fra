@@ -1,44 +1,83 @@
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ResponsiveContainer, LineChart, Line } from 'recharts'
+import { supabase } from '@/lib/supabase/client'
 
 export function DashboardKPIs({ module, period }: { module: string; period: string }) {
-  const getMockData = () => {
-    // Modify based on mock module to simulate dynamics
-    const mult = module === 'financeiro' ? 2 : module === 'vendas' ? 1.5 : 1
+  const [data, setData] = useState([
+    {
+      title: 'Faturamento Total',
+      value: 'Carregando...',
+      change: '0%',
+      color: 'hsl(var(--primary))',
+      chartData: [],
+    },
+    {
+      title: 'Clientes Ativos',
+      value: '...',
+      change: '0%',
+      color: 'hsl(var(--chart-2))',
+      chartData: [],
+    },
+    { title: 'Pedidos', value: '...', change: '0%', color: 'hsl(var(--chart-3))', chartData: [] },
+    {
+      title: 'Itens em Estoque',
+      value: '...',
+      change: '0%',
+      color: 'hsl(var(--chart-4))',
+      chartData: [],
+    },
+  ])
 
-    return [
-      {
-        title: 'Faturamento Total',
-        value: `R$ ${(1240500 * mult).toLocaleString('pt-BR')}`,
-        change: '+12.5%',
-        color: 'hsl(var(--primary))',
-        chartData: [{ v: 10 }, { v: 12 }, { v: 11 }, { v: 15 }, { v: 14 }, { v: 18 }],
-      },
-      {
-        title: 'Leads Ativos',
-        value: Math.floor(842 * mult).toString(),
-        change: '+5.2%',
-        color: 'hsl(var(--chart-2))',
-        chartData: [{ v: 5 }, { v: 6 }, { v: 8 }, { v: 7 }, { v: 10 }, { v: 9 }],
-      },
-      {
-        title: 'Pedidos Pendentes',
-        value: Math.floor(156 / mult).toString(),
-        change: '-2.4%',
-        color: 'hsl(var(--chart-3))',
-        chartData: [{ v: 20 }, { v: 18 }, { v: 19 }, { v: 16 }, { v: 15 }, { v: 12 }],
-      },
-      {
-        title: 'Nível de Estoque',
-        value: '92%',
-        change: 'Estável',
-        color: 'hsl(var(--chart-4))',
-        chartData: [{ v: 90 }, { v: 91 }, { v: 92 }, { v: 92 }, { v: 92 }, { v: 92 }],
-      },
-    ]
-  }
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: vendasData } = await supabase.from('vendas').select('valor_total')
+      const faturamento =
+        vendasData?.reduce((acc, curr) => acc + Number(curr.valor_total || 0), 0) || 0
 
-  const data = getMockData()
+      const { count: clientesCount } = await supabase
+        .from('clientes')
+        .select('*', { count: 'exact', head: true })
+      const { count: vendasCount } = await supabase
+        .from('vendas')
+        .select('*', { count: 'exact', head: true })
+      const { count: prodCount } = await supabase
+        .from('produtos')
+        .select('*', { count: 'exact', head: true })
+
+      setData([
+        {
+          title: 'Faturamento Total',
+          value: `R$ ${faturamento.toLocaleString('pt-BR')}`,
+          change: '+12.5%',
+          color: 'hsl(var(--primary))',
+          chartData: [{ v: 10 }, { v: 12 }, { v: 11 }, { v: 15 }, { v: 14 }, { v: 18 }],
+        },
+        {
+          title: 'Clientes',
+          value: String(clientesCount || 0),
+          change: '+5.2%',
+          color: 'hsl(var(--chart-2))',
+          chartData: [{ v: 5 }, { v: 6 }, { v: 8 }, { v: 7 }, { v: 10 }, { v: 9 }],
+        },
+        {
+          title: 'Pedidos',
+          value: String(vendasCount || 0),
+          change: '+1.4%',
+          color: 'hsl(var(--chart-3))',
+          chartData: [{ v: 20 }, { v: 18 }, { v: 19 }, { v: 16 }, { v: 15 }, { v: 12 }],
+        },
+        {
+          title: 'Itens em Estoque',
+          value: String(prodCount || 0),
+          change: 'Estável',
+          color: 'hsl(var(--chart-4))',
+          chartData: [{ v: 90 }, { v: 91 }, { v: 92 }, { v: 92 }, { v: 92 }, { v: 92 }],
+        },
+      ])
+    }
+    fetchData()
+  }, [module, period])
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up">

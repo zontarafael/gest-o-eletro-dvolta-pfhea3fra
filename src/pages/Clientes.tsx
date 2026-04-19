@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -11,43 +12,25 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Search, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-
-const clientes = [
-  {
-    id: 1,
-    nome: 'João Silva',
-    email: 'joao@email.com',
-    status: 'Ativo',
-    data: '15 Out 2023',
-    gasto: 'R$ 4.500',
-  },
-  {
-    id: 2,
-    nome: 'Maria Oliveira',
-    email: 'maria@email.com',
-    status: 'Inativo',
-    data: '20 Set 2023',
-    gasto: 'R$ 1.200',
-  },
-  {
-    id: 3,
-    nome: 'Carlos Santos',
-    email: 'carlos@email.com',
-    status: 'Ativo',
-    data: '02 Nov 2023',
-    gasto: 'R$ 8.900',
-  },
-  {
-    id: 4,
-    nome: 'Empresa X Ltda',
-    email: 'compras@empresax.com',
-    status: 'Ativo',
-    data: '12 Nov 2023',
-    gasto: 'R$ 24.000',
-  },
-]
+import { supabase } from '@/lib/supabase/client'
 
 export default function Clientes() {
+  const [clientes, setClientes] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchClientes = async () => {
+      const { data } = await supabase
+        .from('clientes')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (data) setClientes(data)
+      setLoading(false)
+    }
+    fetchClientes()
+  }, [])
+
   return (
     <div className="space-y-6 animate-fade-in-up">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -88,29 +71,50 @@ export default function Clientes() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clientes.map((c) => (
-                  <TableRow
-                    key={c.id}
-                    className="border-[#D1D1D1] hover:bg-[#F5F5F7]/50 transition-colors"
-                  >
-                    <TableCell className="font-medium text-foreground">{c.nome}</TableCell>
-                    <TableCell className="text-muted-foreground">{c.email}</TableCell>
-                    <TableCell className="text-muted-foreground">{c.data}</TableCell>
-                    <TableCell className="font-medium">{c.gasto}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={c.status === 'Ativo' ? 'default' : 'secondary'}
-                        className={
-                          c.status === 'Ativo'
-                            ? 'bg-[#10B981] hover:bg-[#10B981]/90'
-                            : 'bg-[#848482] text-white hover:bg-[#848482]/90'
-                        }
-                      >
-                        {c.status}
-                      </Badge>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      Carregando clientes...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : clientes.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      Nenhum cliente encontrado.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  clientes.map((c) => (
+                    <TableRow
+                      key={c.id}
+                      className="border-[#D1D1D1] hover:bg-[#F5F5F7]/50 transition-colors"
+                    >
+                      <TableCell className="font-medium text-foreground">{c.nome}</TableCell>
+                      <TableCell className="text-muted-foreground">{c.email || 'N/A'}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(c.created_at).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        R${' '}
+                        {Number(c.total_gasto || 0).toLocaleString('pt-BR', {
+                          minimumFractionDigits: 2,
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={c.status === 'Ativo' ? 'default' : 'secondary'}
+                          className={
+                            c.status === 'Ativo'
+                              ? 'bg-[#10B981] hover:bg-[#10B981]/90'
+                              : 'bg-[#848482] text-white hover:bg-[#848482]/90'
+                          }
+                        >
+                          {c.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
