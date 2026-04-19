@@ -163,8 +163,8 @@ BEGIN
 
     INSERT INTO public.produtos (id, user_id, nome, codigo, categoria, quantidade, custo_unitario, status, fornecedor_id)
     VALUES 
-      ('p1111111-1111-1111-1111-111111111111'::uuid, admin_id, 'Smart TV 55" OLED', 'PRD-001', 'Eletrônicos', 45, 3500.00, 'Normal', 'f1111111-1111-1111-1111-111111111111'::uuid),
-      ('p2222222-2222-2222-2222-222222222222'::uuid, admin_id, 'Ar Condicionado 12000 BTUs', 'PRD-004', 'Eletrodomésticos', 2, 2200.00, 'Crítico', 'f1111111-1111-1111-1111-111111111111'::uuid)
+      ('11111111-1111-1111-1111-111111111111'::uuid, admin_id, 'Smart TV 55" OLED', 'PRD-001', 'Eletrônicos', 45, 3500.00, 'Normal', 'f1111111-1111-1111-1111-111111111111'::uuid),
+      ('22222222-2222-2222-2222-222222222222'::uuid, admin_id, 'Ar Condicionado 12000 BTUs', 'PRD-004', 'Eletrodomésticos', 2, 2200.00, 'Crítico', 'f1111111-1111-1111-1111-111111111111'::uuid)
     ON CONFLICT (id) DO NOTHING;
 
     INSERT INTO public.clientes (id, user_id, nome, documento, email, telefones, total_gasto)
@@ -175,14 +175,14 @@ BEGIN
 
     INSERT INTO public.vendas (id, user_id, codigo, cliente_id, valor_total, status, forma_pagamento)
     VALUES 
-      ('v1111111-1111-1111-1111-111111111111'::uuid, admin_id, 'PED-001', 'c1111111-1111-1111-1111-111111111111'::uuid, 1500.00, 'Concluído', 'vista'),
-      ('v2222222-2222-2222-2222-222222222222'::uuid, admin_id, 'PED-002', 'c2222222-2222-2222-2222-222222222222'::uuid, 8900.00, 'Em Processamento', 'credito1x')
+      ('33333333-3333-3333-3333-333333333333'::uuid, admin_id, 'PED-001', 'c1111111-1111-1111-1111-111111111111'::uuid, 1500.00, 'Concluído', 'vista'),
+      ('44444444-4444-4444-4444-444444444444'::uuid, admin_id, 'PED-002', 'c2222222-2222-2222-2222-222222222222'::uuid, 8900.00, 'Em Processamento', 'credito1x')
     ON CONFLICT (id) DO NOTHING;
 
     INSERT INTO public.movimentacoes_financeiras (id, user_id, descricao, tipo, valor, status)
     VALUES 
-      ('m1111111-1111-1111-1111-111111111111'::uuid, admin_id, 'Recebimento NF 1024 (Empresa X)', 'Receita', 12300.00, 'Liquidado'),
-      ('m2222222-2222-2222-2222-222222222222'::uuid, admin_id, 'Conta de Energia Elétrica', 'Despesa', 850.00, 'Liquidado')
+      ('55555555-5555-5555-5555-555555555555'::uuid, admin_id, 'Recebimento NF 1024 (Empresa X)', 'Receita', 12300.00, 'Liquidado'),
+      ('66666666-6666-6666-6666-666666666666'::uuid, admin_id, 'Conta de Energia Elétrica', 'Despesa', 850.00, 'Liquidado')
     ON CONFLICT (id) DO NOTHING;
   END IF;
 END $$;
