@@ -9,10 +9,16 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { ShoppingBag, TrendingUp, Percent, Plus } from 'lucide-react'
+import { ShoppingBag, TrendingUp, Percent, Plus, FileText, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 export default function Vendas() {
   const [pedidos, setPedidos] = useState<any[]>([])
@@ -53,14 +59,32 @@ export default function Vendas() {
             Acompanhamento do funil e histórico transacional.
           </p>
         </div>
-        <Button
-          asChild
-          className="shadow-subtle hover:-translate-y-0.5 transition-transform rounded-lg gap-2"
-        >
-          <Link to="/vendas/nova">
-            <Plus className="w-4 h-4" /> Nova Venda
-          </Link>
-        </Button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2 shadow-subtle bg-white">
+                <FileText className="w-4 h-4" />
+                Relatórios
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => window.print()}>
+                <Download className="w-4 h-4" /> Imprimir Resumo
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2 cursor-pointer">
+                <FileText className="w-4 h-4" /> Relatório Mensal
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            asChild
+            className="shadow-subtle hover:-translate-y-0.5 transition-transform rounded-lg gap-2 w-full sm:w-auto"
+          >
+            <Link to="/vendas/nova">
+              <Plus className="w-4 h-4" /> Nova Venda
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

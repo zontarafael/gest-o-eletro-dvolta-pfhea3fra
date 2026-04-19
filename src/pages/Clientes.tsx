@@ -10,9 +10,16 @@ import {
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Search } from 'lucide-react'
+import { Search, FileText, Download } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { ClienteFormSheet } from './clientes/ClienteFormSheet'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 export default function Clientes() {
   const [clientes, setClientes] = useState<any[]>([])
@@ -48,7 +55,25 @@ export default function Clientes() {
             Base de dados e histórico de relacionamento.
           </p>
         </div>
-        <ClienteFormSheet onSuccess={(c) => setClientes([c, ...clientes])} />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2 shadow-subtle bg-white">
+                <FileText className="w-4 h-4" />
+                Relatórios
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => window.print()}>
+                <Download className="w-4 h-4" /> Imprimir Lista
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2 cursor-pointer">
+                <FileText className="w-4 h-4" /> Relatório Completo
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <ClienteFormSheet onSuccess={(c) => setClientes([c, ...clientes])} />
+        </div>
       </div>
 
       <Card className="border-[#D1D1D1] shadow-subtle bg-white">
