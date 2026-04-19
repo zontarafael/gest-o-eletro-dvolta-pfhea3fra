@@ -93,6 +93,7 @@ export default function NovoProduto() {
         fornecedor_id: fornecedorId,
         lote,
         imagem_url: p.imagemUrl || null,
+        status: 'Em preparação',
       }
     })
 

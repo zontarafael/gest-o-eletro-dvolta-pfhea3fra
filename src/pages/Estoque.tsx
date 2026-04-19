@@ -14,10 +14,35 @@ import { Plus, PackageSearch, ImageOff } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { useAuth } from '@/hooks/use-auth'
+import { useToast } from '@/hooks/use-toast'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export default function Estoque() {
   const [produtos, setProdutos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('profiles')
+        .select('is_admin, role')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          setIsAdmin(data?.is_admin || data?.role === 'admin')
+        })
+    }
+  }, [user])
 
   useEffect(() => {
     const fetchProdutos = async () => {
@@ -31,6 +56,42 @@ export default function Estoque() {
     }
     fetchProdutos()
   }, [])
+
+  const handleStatusChange = async (id: string, novoStatus: string) => {
+    const { error } = await supabase.from('produtos').update({ status: novoStatus }).eq('id', id)
+    if (!error) {
+      setProdutos(produtos.map((p) => (p.id === id ? { ...p, status: novoStatus } : p)))
+      toast({
+        title: 'Status atualizado',
+        description: 'O status do produto foi atualizado com sucesso.',
+      })
+    } else {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar o status.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Em preparação':
+        return 'border-[#F59E0B] text-[#F59E0B] bg-[#F59E0B]/10'
+      case 'Estoque':
+        return 'border-[#10B981] text-[#10B981] bg-[#10B981]/10'
+      case 'Reservado':
+        return 'border-[#3B82F6] text-[#3B82F6] bg-[#3B82F6]/10'
+      case 'Garantia':
+        return 'border-[#8B5CF6] text-[#8B5CF6] bg-[#8B5CF6]/10'
+      case 'Devolução':
+        return 'border-[#EF4444] text-[#EF4444] bg-[#EF4444]/10'
+      case 'Vendido':
+        return 'border-[#6B7280] text-[#6B7280] bg-[#6B7280]/10'
+      default:
+        return 'border-[#F59E0B] text-[#F59E0B] bg-[#F59E0B]/10'
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -135,18 +196,33 @@ export default function Estoque() {
                       <TableCell>{p.categoria || '-'}</TableCell>
                       <TableCell className="font-bold">{p.quantidade || 0}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={`font-semibold ${
-                            p.status === 'Normal'
-                              ? 'border-[#10B981] text-[#10B981] bg-[#10B981]/10'
-                              : p.status === 'Baixo'
-                                ? 'border-[#F59E0B] text-[#F59E0B] bg-[#F59E0B]/10'
-                                : 'border-destructive text-destructive bg-destructive/10'
-                          }`}
-                        >
-                          {p.status || 'Normal'}
-                        </Badge>
+                        {isAdmin ? (
+                          <Select
+                            value={p.status || 'Em preparação'}
+                            onValueChange={(value) => handleStatusChange(p.id, value)}
+                          >
+                            <SelectTrigger
+                              className={`h-8 text-xs font-semibold w-[140px] ${getStatusColor(p.status || 'Em preparação')}`}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Em preparação">Em preparação</SelectItem>
+                              <SelectItem value="Estoque">Estoque</SelectItem>
+                              <SelectItem value="Reservado">Reservado</SelectItem>
+                              <SelectItem value="Garantia">Garantia</SelectItem>
+                              <SelectItem value="Devolução">Devolução</SelectItem>
+                              <SelectItem value="Vendido">Vendido</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className={`font-semibold ${getStatusColor(p.status || 'Em preparação')}`}
+                          >
+                            {p.status || 'Em preparação'}
+                          </Badge>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
