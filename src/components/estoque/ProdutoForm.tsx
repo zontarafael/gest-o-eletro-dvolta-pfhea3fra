@@ -28,6 +28,20 @@ export function ProdutoForm({
   const [produtoEncontrado, setProdutoEncontrado] = useState<any>(null)
   const [uploading, setUploading] = useState(false)
 
+  const CATEGORY_MAP: Record<string, string> = {
+    Geladeira: 'GEL',
+    'Lava-louça': 'LAV',
+    'Secadora de roupas': 'SEC',
+    'Máquina de lavar roupas': 'MLR',
+    Cervejeira: 'CER',
+    Adega: 'ADE',
+    'Purificador de água': 'PUR',
+    Freezer: 'FRZ',
+    'Ar condicionado': 'ARC',
+    'Cortina de ar': 'CTA',
+    Coifa: 'COI',
+  }
+
   const defaultForm = {
     categoria: '',
     codCategoria: '',
@@ -48,6 +62,7 @@ export function ProdutoForm({
   }
 
   const [form, setForm] = useState(defaultForm)
+  const [isNovaCategoria, setIsNovaCategoria] = useState(false)
 
   const handleBusca = async () => {
     if (!busca) return
@@ -60,6 +75,12 @@ export function ProdutoForm({
 
     if (data) {
       setProdutoEncontrado(data)
+      const isKnownCat = data.categoria ? Object.keys(CATEGORY_MAP).includes(data.categoria) : false
+      if (data.categoria && !isKnownCat) {
+        setIsNovaCategoria(true)
+      } else {
+        setIsNovaCategoria(false)
+      }
       setForm({
         ...form,
         categoria: data.categoria || '',
@@ -137,6 +158,7 @@ export function ProdutoForm({
     setForm(defaultForm)
     setBusca('')
     setProdutoEncontrado(null)
+    setIsNovaCategoria(false)
   }
 
   return (
@@ -199,41 +221,64 @@ export function ProdutoForm({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
               <div className="space-y-1">
-                <Label>Categoria</Label>
-                <Select
-                  value={form.categoria}
-                  onValueChange={(v) => setForm({ ...form, categoria: v })}
-                >
-                  <SelectTrigger className="bg-[#F5F5F7] border-[#D1D1D1]">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[
-                      'Geladeira',
-                      'Lava-louça',
-                      'Secadora de roupas',
-                      'Máquina de lavar roupas',
-                      'Cervejeira',
-                      'Adega',
-                      'Purificador de água',
-                      'Freezer',
-                      'Ar condicionado',
-                      'Cortina de ar',
-                      'Coifa',
-                    ].map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
+                <div className="flex justify-between items-center">
+                  <Label>Categoria</Label>
+                  {isNovaCategoria && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsNovaCategoria(false)
+                        setForm({ ...form, categoria: '', codCategoria: '' })
+                      }}
+                      className="text-[10px] text-primary hover:underline"
+                    >
+                      Voltar à lista
+                    </button>
+                  )}
+                </div>
+                {isNovaCategoria ? (
+                  <Input
+                    autoFocus
+                    placeholder="Nome da categoria..."
+                    className="bg-[#F5F5F7] border-[#D1D1D1]"
+                    value={form.categoria}
+                    onChange={(e) => setForm({ ...form, categoria: e.target.value })}
+                  />
+                ) : (
+                  <Select
+                    value={form.categoria}
+                    onValueChange={(v) => {
+                      if (v === 'OUTRA') {
+                        setIsNovaCategoria(true)
+                        setForm({ ...form, categoria: '', codCategoria: '' })
+                      } else {
+                        setForm({ ...form, categoria: v, codCategoria: CATEGORY_MAP[v] || '' })
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="bg-[#F5F5F7] border-[#D1D1D1]">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.keys(CATEGORY_MAP).map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="OUTRA" className="font-semibold text-primary">
+                        + Nova Categoria
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="space-y-1">
                 <Label>Cód. Categoria</Label>
                 <Input
                   className="bg-[#F5F5F7] border-[#D1D1D1]"
                   value={form.codCategoria}
-                  onChange={(e) => setForm({ ...form, codCategoria: e.target.value })}
+                  placeholder={isNovaCategoria ? 'Ex: NOV' : ''}
+                  onChange={(e) => setForm({ ...form, codCategoria: e.target.value.toUpperCase() })}
                 />
               </div>
               <div className="space-y-1">
