@@ -20,6 +20,17 @@ export default function NovoProduto() {
   const [freteTotal, setFreteTotal] = useState(0)
   const [notaFiscal, setNotaFiscal] = useState('')
   const [produtos, setProdutos] = useState<any[]>([])
+
+  const lote = useMemo(() => {
+    const numStr = notaFiscal.replace(/\D/g, '')
+    if (!numStr) return ''
+    const paddedNota = numStr.padStart(6, '0').slice(-6)
+    const today = new Date()
+    const dd = String(today.getDate()).padStart(2, '0')
+    const mm = String(today.getMonth() + 1).padStart(2, '0')
+    const yy = String(today.getFullYear()).slice(-2)
+    return `${dd}.${mm}.${yy}.${paddedNota}`
+  }, [notaFiscal])
   const [fornecedor, setFornecedor] = useState<any>({})
   const [loading, setLoading] = useState(false)
 
@@ -55,7 +66,7 @@ export default function NovoProduto() {
       if (newForn) fornecedorId = newForn.id
     }
 
-    const produtosToInsert = produtos.map((p) => {
+    const produtosToInsert: any[] = produtos.map((p) => {
       const custoTotalItem = p.quantidade * p.custoUnitario
       const proporcao = totalCustoProdutos > 0 ? custoTotalItem / totalCustoProdutos : 0
       const freteUnitario = p.quantidade > 0 ? (freteTotal * proporcao) / p.quantidade : 0
@@ -79,6 +90,7 @@ export default function NovoProduto() {
         imposto2: p.imposto2,
         valor_frete_unitario: freteUnitario,
         fornecedor_id: fornecedorId,
+        lote,
       }
     })
 
@@ -124,24 +136,38 @@ export default function NovoProduto() {
         <CardHeader>
           <CardTitle className="text-lg">Dados da Nota Fiscal</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col sm:flex-row gap-6">
-          <div className="space-y-2 flex-1">
-            <Label className="font-semibold text-foreground">Número da Nota Fiscal</Label>
-            <Input
-              value={notaFiscal}
-              onChange={(e) => setNotaFiscal(e.target.value)}
-              placeholder="Ex: 000.000.000"
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-            />
+        <CardContent className="flex flex-col gap-6">
+          <div className="flex flex-col sm:flex-row gap-6">
+            <div className="space-y-2 flex-1">
+              <Label className="font-semibold text-foreground">Número da Nota Fiscal</Label>
+              <Input
+                value={notaFiscal}
+                onChange={(e) => setNotaFiscal(e.target.value)}
+                placeholder="Ex: 129"
+                className="bg-[#F5F5F7] border-[#D1D1D1]"
+              />
+            </div>
+            <div className="space-y-2 flex-1">
+              <Label className="font-semibold text-foreground">Valor do Frete Total (R$)</Label>
+              <Input
+                type="number"
+                value={freteTotal}
+                onChange={(e) => setFreteTotal(Number(e.target.value))}
+                className="bg-[#F5F5F7] border-[#D1D1D1]"
+              />
+            </div>
           </div>
-          <div className="space-y-2 flex-1">
-            <Label className="font-semibold text-foreground">Valor do Frete Total (R$)</Label>
-            <Input
-              type="number"
-              value={freteTotal}
-              onChange={(e) => setFreteTotal(Number(e.target.value))}
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-            />
+          <div className="flex flex-col sm:flex-row gap-6">
+            <div className="space-y-2 flex-1">
+              <Label className="font-semibold text-foreground">Lote</Label>
+              <Input
+                value={lote}
+                readOnly
+                placeholder="Gerado automaticamente"
+                className="bg-[#E5E5E5] border-[#D1D1D1] text-muted-foreground cursor-not-allowed focus-visible:ring-0"
+              />
+            </div>
+            <div className="space-y-2 flex-1 hidden sm:block"></div>
           </div>
         </CardContent>
       </Card>
