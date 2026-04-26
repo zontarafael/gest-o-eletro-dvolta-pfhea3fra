@@ -1,6 +1,16 @@
 import { supabase } from '@/lib/supabase/client'
 
 export async function printPedidoVenda(vendaId: string) {
+  const printWindow = window.open('', '_blank', 'width=900,height=800')
+  if (!printWindow) {
+    alert('Por favor, permita pop-ups para visualizar a impressão do pedido.')
+    return
+  }
+
+  printWindow.document.write(
+    '<html><head><title>Carregando...</title></head><body style="font-family: sans-serif; padding: 20px;">Gerando documento, por favor aguarde...</body></html>',
+  )
+
   const { data: venda, error } = await supabase
     .from('vendas')
     .select(`
@@ -16,6 +26,7 @@ export async function printPedidoVenda(vendaId: string) {
 
   if (error || !venda) {
     console.error('Error fetching venda for printing', error)
+    printWindow.close()
     alert('Erro ao carregar os dados para impressão.')
     return
   }
@@ -40,9 +51,6 @@ export async function printPedidoVenda(vendaId: string) {
   const empresaTelefone = empresa?.telefone || '(49) 98405-2610'
   const empresaEmail = empresa?.email || 'dvoltalogistica@gmail.com'
   const site = 'www.dvoltalogistica.com.br'
-
-  const printWindow = window.open('', '', 'width=900,height=800')
-  if (!printWindow) return
 
   const dataVenda = new Date(venda.data_venda || new Date()).toLocaleDateString('pt-BR')
   const cliente = venda.clientes || {}
@@ -218,7 +226,7 @@ export async function printPedidoVenda(vendaId: string) {
         
         <div class="termo">
           <h3>TERMO DE CIÊNCIA E CONCORDÂNCIA<br/>PRODUTOS ELETRO DVOLTA – ECONOMIA CIRCULAR</h3>
-          <p><strong>Declaro que:</strong></p>
+          <p><strong>declaro que:</strong></p>
           <p>1. Estou adquirindo um produto oriundo da economia circular.</p>
           <p>2. Fui informado(a) de forma clara e adequada que o produto:</p>
           <ul>
@@ -246,12 +254,13 @@ export async function printPedidoVenda(vendaId: string) {
         </div>
         
         <script>
-          window.onload = () => { window.print(); setTimeout(() => window.close(), 500); }
+          setTimeout(() => { window.print(); setTimeout(() => window.close(), 500); }, 500);
         </script>
       </body>
     </html>
   `
 
+  printWindow.document.open()
   printWindow.document.write(html)
   printWindow.document.close()
 }
