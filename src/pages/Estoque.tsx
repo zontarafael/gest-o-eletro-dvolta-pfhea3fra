@@ -93,33 +93,4 @@ export default function Estoque() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Buscar por produto, código ou categoria..."
-              className="pl-9 bg-gray-50/50 focus-visible:bg-white"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <EstoqueTable
-            produtos={produtos.filter(
-              (p) =>
-                p.nome?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                p.codigo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                p.categoria?.toLowerCase().includes(searchQuery.toLowerCase()),
-            )}
-            loading={loading}
-            isAdmin={isAdmin}
-            handleStatusChange={handleStatusChange}
-          />
-        </CardContent>
-      </Card>
-
-      <ReportDialog
-        isOpen={isReportModalOpen}
-        onOpenChange={setIsReportModalOpen}
-        produtos={produtos}
-      />
-    </div>
-  )
-}
+              placeholder="Buscar
