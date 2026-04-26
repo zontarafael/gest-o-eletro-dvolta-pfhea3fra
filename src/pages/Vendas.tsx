@@ -9,7 +9,16 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { ShoppingBag, TrendingUp, Percent, Plus, FileText, Download, Printer } from 'lucide-react'
+import {
+  ShoppingBag,
+  TrendingUp,
+  Percent,
+  Plus,
+  FileText,
+  Download,
+  Printer,
+  CalendarIcon,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
@@ -19,21 +28,71 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { cn } from '@/lib/utils'
+
+type DateFilterOption = 'todos' | 'hoje' | 'ultimos-7-dias' | 'mes-atual' | 'personalizado'
 
 export default function Vendas() {
   const [pedidos, setPedidos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [metrics, setMetrics] = useState({ totalVendas: 0, ticketMedio: 0 })
 
+  const [dateFilter, setDateFilter] = useState<DateFilterOption>('todos')
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
+  })
+
   useEffect(() => {
     const fetchPedidos = async () => {
-      const { data } = await supabase
+      setLoading(true)
+      let query = supabase
         .from('vendas')
         .select(`
           *,
           clientes ( nome )
         `)
-        .order('created_at', { ascending: false })
+        .order('data_venda', { ascending: false })
+
+      if (dateFilter !== 'todos') {
+        const today = new Date()
+        let fromDate: Date | undefined
+        let toDate: Date | undefined
+
+        if (dateFilter === 'hoje') {
+          fromDate = startOfDay(today)
+          toDate = endOfDay(today)
+        } else if (dateFilter === 'ultimos-7-dias') {
+          fromDate = startOfDay(subDays(today, 7))
+          toDate = endOfDay(today)
+        } else if (dateFilter === 'mes-atual') {
+          fromDate = startOfMonth(today)
+          toDate = endOfMonth(today)
+        } else if (dateFilter === 'personalizado') {
+          if (dateRange.from) fromDate = startOfDay(dateRange.from)
+          if (dateRange.to) toDate = endOfDay(dateRange.to)
+        }
+
+        if (fromDate) {
+          query = query.gte('data_venda', fromDate.toISOString())
+        }
+        if (toDate) {
+          query = query.lte('data_venda', toDate.toISOString())
+        }
+      }
+
+      const { data } = await query
 
       if (data) {
         setPedidos(data)
@@ -46,11 +105,11 @@ export default function Vendas() {
       setLoading(false)
     }
     fetchPedidos()
-  }, [])
+  }, [dateFilter, dateRange])
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
             Vendas e Pedidos
@@ -59,7 +118,59 @@ export default function Vendas() {
             Acompanhamento do funil e histórico transacional.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full xl:w-auto flex-wrap">
+          <Select value={dateFilter} onValueChange={(value: any) => setDateFilter(value)}>
+            <SelectTrigger className="w-full sm:w-[160px] bg-white shadow-subtle">
+              <SelectValue placeholder="Filtrar por data" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todo o período</SelectItem>
+              <SelectItem value="hoje">Hoje</SelectItem>
+              <SelectItem value="ultimos-7-dias">Últimos 7 dias</SelectItem>
+              <SelectItem value="mes-atual">Mês atual</SelectItem>
+              <SelectItem value="personalizado">Personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {dateFilter === 'personalizado' && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'justify-start text-left font-normal bg-white shadow-subtle w-full sm:w-[240px]',
+                    !dateRange.from && 'text-muted-foreground',
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange.from ? (
+                    dateRange.to ? (
+                      <>
+                        {format(dateRange.from, 'dd/MM/yyyy')} -{' '}
+                        {format(dateRange.to, 'dd/MM/yyyy')}
+                      </>
+                    ) : (
+                      format(dateRange.from, 'dd/MM/yyyy')
+                    )
+                  ) : (
+                    <span>Selecione o período</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange.from}
+                  selected={{ from: dateRange.from, to: dateRange.to }}
+                  onSelect={(range: any) => setDateRange({ from: range?.from, to: range?.to })}
+                  numberOfMonths={1}
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+          )}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="gap-2 shadow-subtle bg-white">
@@ -152,7 +263,7 @@ export default function Vendas() {
                 ) : pedidos.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      Nenhum pedido registrado.
+                      Nenhum pedido encontrado.
                     </TableCell>
                   </TableRow>
                 ) : (
