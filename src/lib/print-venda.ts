@@ -218,21 +218,104 @@ export async function printPedidoVenda(vendaId: string) {
             ${(() => {
               try {
                 const parsed = JSON.parse(venda.forma_pagamento || '[]')
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                  return parsed
-                    .map((pag: any) => {
-                      const metodo = pag.metodo || pag.forma || pag.tipo || 'Não informado'
-                      const parcelas = pag.parcelas || pag.quantidade_parcelas || 1
-                      const valor = pag.valor || 0
-                      const valorParcela = pag.valor_parcela || valor / parcelas
-                      const vencimento = pag.vencimento || pag.data_vencimento || dataVenda
-                      const obs = pag.observacao || ''
 
+                const extractPagamentos = (data: any): any[] => {
+                  if (Array.isArray(data)) {
+                    return data.flatMap((item) => extractPagamentos(item))
+                  } else if (data && typeof data === 'object') {
+                    if (data.pagamentos && Array.isArray(data.pagamentos)) {
+                      return extractPagamentos(data.pagamentos)
+                    }
+                    return [data]
+                  }
+                  return []
+                }
+
+                const pagamentos = extractPagamentos(parsed)
+
+                if (pagamentos.length > 0) {
+                  return pagamentos
+                    .map((pag: any) => {
+                      const metodo =
+                        pag.metodo ||
+                        pag.forma ||
+                        pag.tipo ||
+                        pag.forma_pagamento ||
+                        'Não informado'
+                      const parcelas = Number(pag.parcelas || pag.quantidade_parcelas || 1)
+                      const valorTotalPagamento = Number(
+                        pag.valor || pag.valor_total || venda.valor_total || 0,
+                      )
+                      const valorParcela = Number(
+                        pag.valor_parcela || valorTotalPagamento / parcelas || 0,
+                      )
+                      const obs = pag.observacao || pag.detalhes || ''
+
+                      if (
+                        pag.parcelas_list &&
+                        Array.isArray(pag.parcelas_list) &&
+                        pag.parcelas_list.length > 0
+                      ) {
+                        return pag.parcelas_list
+                          .map((p: any, i: number) => {
+                            const dataVenc = p.vencimento || p.data || dataVenda
+                            const val = Number(p.valor || valorParcela)
+                            return `
+                          <tr>
+                            <td class="text-center">${dataVenc}</td>
+                            <td class="text-right">R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                            <td>${metodo} (${i + 1}/${pag.parcelas_list.length})</td>
+                            <td>${obs}</td>
+                          </tr>
+                        `
+                          })
+                          .join('')
+                      }
+
+                      if (parcelas > 1) {
+                        let rows = ''
+                        for (let i = 0; i < parcelas; i++) {
+                          let dataVencStr = ''
+                          if (
+                            pag.vencimentos &&
+                            Array.isArray(pag.vencimentos) &&
+                            pag.vencimentos[i]
+                          ) {
+                            dataVencStr = pag.vencimentos[i]
+                          } else {
+                            const baseDateStr =
+                              pag.primeiro_vencimento || pag.vencimento || venda.data_venda
+                            const baseDate = baseDateStr ? new Date(baseDateStr) : new Date()
+
+                            if (!isNaN(baseDate.getTime())) {
+                              baseDate.setMonth(baseDate.getMonth() + i)
+                              // Evitar problema de timezone se a data for meia noite UTC
+                              dataVencStr = baseDate.toLocaleDateString('pt-BR', {
+                                timeZone: 'UTC',
+                              })
+                            } else {
+                              dataVencStr = baseDateStr || dataVenda
+                            }
+                          }
+
+                          rows += `
+                          <tr>
+                            <td class="text-center">${dataVencStr || dataVenda}</td>
+                            <td class="text-right">R$ ${valorParcela.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                            <td>${metodo} (${i + 1}/${parcelas})</td>
+                            <td>${obs}</td>
+                          </tr>
+                        `
+                        }
+                        return rows
+                      }
+
+                      const vencimento = pag.vencimento || pag.data_vencimento || dataVenda
                       return `
                       <tr>
                         <td class="text-center">${vencimento}</td>
-                        <td class="text-right">R$ ${Number(valorParcela).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td>${metodo} ${parcelas > 1 ? '(' + parcelas + 'x)' : ''}</td>
+                        <td class="text-right">R$ ${valorTotalPagamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td>${metodo}</td>
                         <td>${obs}</td>
                       </tr>
                     `
