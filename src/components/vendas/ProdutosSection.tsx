@@ -76,7 +76,7 @@ export function ProdutosSection({
         id: selectedProduct.id,
         nome: selectedProduct.nome,
         preco: Number(selectedProduct.preco_venda || selectedProduct.custo_unitario * 1.5 || 0),
-        qtd: maxQtd > 0 ? 1 : 0,
+        qtd: 1,
         tipo: tipoProduto,
         key: Date.now(),
         estoque: maxQtd,
@@ -113,11 +113,10 @@ export function ProdutosSection({
     updateList(
       selectedProducts.map((p) => {
         if (p.key !== key) return p
-        const maxQtd = p.id !== 'N/A' && p.estoque !== undefined ? p.estoque : 999999
         if (val === '') return { ...p, qtd: '' }
         let parsed = parseInt(val, 10)
         if (isNaN(parsed)) return { ...p, qtd: '' }
-        return { ...p, qtd: Math.min(Math.max(0, parsed), maxQtd) }
+        return { ...p, qtd: Math.max(0, parsed) }
       }),
     )
   }
@@ -274,7 +273,6 @@ export function ProdutosSection({
                         <Input
                           type="number"
                           min={1}
-                          max={p.estoque}
                           value={p.qtd}
                           onChange={(e) => updateQtd(p.key, e.target.value)}
                           onBlur={(e) => {
@@ -282,10 +280,23 @@ export function ProdutosSection({
                               updateQtd(p.key, '1')
                             }
                           }}
-                          className="h-8 w-16 bg-[#F5F5F7] border-[#D1D1D1] px-2 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className={cn(
+                            'h-8 w-16 bg-[#F5F5F7] border-[#D1D1D1] px-2 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
+                            p.id !== 'N/A' &&
+                              p.estoque !== undefined &&
+                              Number(p.qtd) > p.estoque &&
+                              'border-destructive text-destructive focus-visible:ring-destructive',
+                          )}
                         />
                         {p.id !== 'N/A' && p.estoque !== undefined && (
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          <span
+                            className={cn(
+                              'text-xs whitespace-nowrap',
+                              Number(p.qtd) > p.estoque
+                                ? 'text-destructive font-bold'
+                                : 'text-muted-foreground',
+                            )}
+                          >
                             / {p.estoque}
                           </span>
                         )}
