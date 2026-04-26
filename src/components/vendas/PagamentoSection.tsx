@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -20,6 +20,9 @@ export interface PagamentoMisto {
 
 interface PagamentoSectionProps {
   total: number
+  pagamento?: string
+  pagamentosMistos?: PagamentoMisto[]
+  parcelas?: number
   onChange?: (v: string) => void
   onMistoChange?: (pagamentos: PagamentoMisto[]) => void
   onParcelasChange?: (parcelas: number) => void
@@ -27,13 +30,34 @@ interface PagamentoSectionProps {
 
 export function PagamentoSection({
   total,
+  pagamento = 'vista',
+  pagamentosMistos,
+  parcelas,
   onChange,
   onMistoChange,
   onParcelasChange,
 }: PagamentoSectionProps) {
-  const [tipo, setTipo] = useState('vista')
-  const [mistos, setMistos] = useState<PagamentoMisto[]>([{ forma: '', valor: 0 }])
-  const [parcelasStr, setParcelasStr] = useState('1')
+  const [tipo, setTipo] = useState(pagamento)
+  const [mistos, setMistos] = useState<PagamentoMisto[]>(
+    pagamentosMistos || [{ forma: '', valor: 0 }],
+  )
+  const [parcelasStr, setParcelasStr] = useState(parcelas ? parcelas.toString() : '1')
+
+  useEffect(() => {
+    if (pagamento) setTipo(pagamento)
+  }, [pagamento])
+
+  useEffect(() => {
+    if (pagamentosMistos && pagamentosMistos.length > 0) {
+      setMistos(pagamentosMistos)
+    }
+  }, [pagamentosMistos])
+
+  useEffect(() => {
+    if (parcelas) {
+      setParcelasStr(parcelas.toString())
+    }
+  }, [parcelas])
 
   const handleTipoChange = (val: string) => {
     setTipo(val)
@@ -70,7 +94,7 @@ export function PagamentoSection({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Opção de Pagamento</Label>
-            <Select defaultValue="vista" onValueChange={handleTipoChange}>
+            <Select value={tipo} onValueChange={handleTipoChange}>
               <SelectTrigger className="w-full bg-[#F5F5F7] border-[#D1D1D1]">
                 <SelectValue placeholder="Selecione a forma de pagamento" />
               </SelectTrigger>

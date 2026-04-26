@@ -31,7 +31,13 @@ import {
   CommandList,
 } from '@/components/ui/command'
 
-export function ProdutosSection({ onChange }: { onChange?: (p: any[]) => void }) {
+export function ProdutosSection({
+  produtos,
+  onChange,
+}: {
+  produtos?: any[]
+  onChange?: (p: any[]) => void
+}) {
   const [tipoProduto, setTipoProduto] = useState<string>('')
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -39,6 +45,12 @@ export function ProdutosSection({ onChange }: { onChange?: (p: any[]) => void })
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null)
 
   const [selectedProducts, setSelectedProducts] = useState<any[]>([])
+
+  useEffect(() => {
+    if (produtos && produtos.length > 0 && selectedProducts.length === 0) {
+      setSelectedProducts(produtos)
+    }
+  }, [produtos, selectedProducts.length])
 
   useEffect(() => {
     if (!open) return

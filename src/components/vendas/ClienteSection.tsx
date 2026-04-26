@@ -17,7 +17,13 @@ import {
 import { cn } from '@/lib/utils'
 import { ClienteFormSheet } from '@/pages/clientes/ClienteFormSheet'
 
-export function ClienteSection({ onChange }: { onChange?: (c: any) => void }) {
+export function ClienteSection({
+  cliente,
+  onChange,
+}: {
+  cliente?: any
+  onChange?: (c: any) => void
+}) {
   const [openPopover, setOpenPopover] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedTerm, setDebouncedTerm] = useState('')
@@ -28,6 +34,14 @@ export function ClienteSection({ onChange }: { onChange?: (c: any) => void }) {
   const [customer, setCustomer] = useState<any>(null)
   const [phones, setPhones] = useState<string[]>([''])
   const [sheetOpen, setSheetOpen] = useState(false)
+
+  useEffect(() => {
+    if (cliente && (!customer || cliente.id !== customer.id)) {
+      setCustomer(cliente)
+      setPhones(cliente.telefones && cliente.telefones.length > 0 ? cliente.telefones : [''])
+      setHasSearched(true)
+    }
+  }, [cliente, customer?.id])
 
   // Debounce para a busca
   useEffect(() => {

@@ -58,8 +58,21 @@ export default function NovaVenda() {
             nome: i.produtos?.nome || 'Produto Desconhecido',
             preco: i.preco_unitario,
             qtd: i.quantidade,
+            tipo: i.produtos?.categoria || 'Produto Novo',
+            key: i.id || Date.now() + Math.random(),
           }))
           setProdutos(mappedProdutos)
+        }
+
+        const { data: movs } = await supabase
+          .from('movimentacoes_financeiras')
+          .select('*')
+          .like('descricao', `Venda ${venda.codigo}%`)
+
+        if (movs && movs.length > 0) {
+          if (venda.forma_pagamento === 'credito') {
+            setParcelas(movs.length)
+          }
         }
       }
       setLoading(false)
@@ -323,11 +336,12 @@ export default function NovaVenda() {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        <ClienteSection {...({ cliente } as any)} onChange={setCliente} />
-        <ProdutosSection {...({ produtos } as any)} onChange={setProdutos} />
+        <ClienteSection cliente={cliente} onChange={setCliente} />
+        <ProdutosSection produtos={produtos} onChange={setProdutos} />
         {TransporteSection && <TransporteSection />}
         <PagamentoSection
-          {...({ pagamento } as any)}
+          pagamento={pagamento}
+          parcelas={parcelas}
           total={total}
           onChange={setPagamento}
           onMistoChange={setPagamentosMistos}
