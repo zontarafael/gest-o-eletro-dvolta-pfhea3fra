@@ -25,6 +25,9 @@ export default function NovaVenda() {
   ])
   const [assinatura, setAssinatura] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [parcelas, setParcelas] = useState(1)
+
+  const total = produtos.reduce((acc, p) => acc + p.preco * p.qtd, 0)
 
   const handleSave = async () => {
     if (!user) return
@@ -45,7 +48,14 @@ export default function NovaVenda() {
       return
     }
 
-    const total = produtos.reduce((acc, p) => acc + p.preco * p.qtd, 0)
+    if (pagamento === 'credito' && (parcelas < 1 || isNaN(parcelas))) {
+      toast({
+        title: 'Atenção',
+        description: 'Informe uma quantidade válida de parcelas.',
+        variant: 'destructive',
+      })
+      return
+    }
 
     if (pagamento === 'misto') {
       const mistoTotal = pagamentosMistos.reduce((acc, pm) => acc + (pm.valor || 0), 0)
@@ -133,6 +143,23 @@ export default function NovaVenda() {
           status: 'Liquidado',
         }))
         await supabase.from('movimentacoes_financeiras').insert(movimentacoes)
+      } else if (pagamento === 'credito') {
+        const movimentacoes = []
+        const valorParcela = total / parcelas
+        for (let i = 1; i <= parcelas; i++) {
+          const dataVencimento = new Date()
+          dataVencimento.setDate(dataVencimento.getDate() + i * 30)
+
+          movimentacoes.push({
+            user_id: user.id,
+            descricao: `Venda ${codigo} - ${cliente.nome} (Parcela ${i}/${parcelas})`,
+            tipo: 'Receita',
+            valor: valorParcela,
+            status: 'Pendente',
+            data_movimentacao: dataVencimento.toISOString(),
+          })
+        }
+        await supabase.from('movimentacoes_financeiras').insert(movimentacoes)
       } else {
         await supabase.from('movimentacoes_financeiras').insert({
           user_id: user.id,
@@ -172,7 +199,12 @@ export default function NovaVenda() {
         <ClienteSection onChange={setCliente} />
         <ProdutosSection onChange={setProdutos} />
         {TransporteSection && <TransporteSection />}
-        <PagamentoSection onChange={setPagamento} onMistoChange={setPagamentosMistos} />
+        <PagamentoSection
+          total={total}
+          onChange={setPagamento}
+          onMistoChange={setPagamentosMistos}
+          onParcelasChange={setParcelas}
+        />
         <AssinaturaSection onChange={setAssinatura} />
         <ImpressoesSection />
 

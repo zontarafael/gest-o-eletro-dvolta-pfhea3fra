@@ -18,13 +18,21 @@ export interface PagamentoMisto {
 }
 
 interface PagamentoSectionProps {
+  total: number
   onChange?: (v: string) => void
   onMistoChange?: (pagamentos: PagamentoMisto[]) => void
+  onParcelasChange?: (parcelas: number) => void
 }
 
-export function PagamentoSection({ onChange, onMistoChange }: PagamentoSectionProps) {
+export function PagamentoSection({
+  total,
+  onChange,
+  onMistoChange,
+  onParcelasChange,
+}: PagamentoSectionProps) {
   const [tipo, setTipo] = useState('vista')
   const [mistos, setMistos] = useState<PagamentoMisto[]>([{ forma: '', valor: 0 }])
+  const [parcelasStr, setParcelasStr] = useState('1')
 
   const handleTipoChange = (val: string) => {
     setTipo(val)
@@ -67,16 +75,70 @@ export function PagamentoSection({ onChange, onMistoChange }: PagamentoSectionPr
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="vista">A vista em dinheiro, PIX ou cartão de débito</SelectItem>
-                <SelectItem value="credito1x">No cartão de crédito em 1 vez</SelectItem>
-                <SelectItem value="creditoparcelado">
-                  No cartão de crédito de 2 a 10 parcelas com juros
-                </SelectItem>
+                <SelectItem value="credito">Cartão de Crédito</SelectItem>
                 <SelectItem value="boleto">No boleto bancário</SelectItem>
                 <SelectItem value="cheque">No cheque</SelectItem>
                 <SelectItem value="misto">Misto (Mais de uma opção)</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {tipo === 'credito' && (
+            <div className="space-y-3 pt-4 mt-2 border-t border-[#D1D1D1] animate-in fade-in slide-in-from-top-2">
+              <Label>Quantidade de Parcelas</Label>
+              <Input
+                type="number"
+                min={1}
+                max={120}
+                value={parcelasStr}
+                onChange={(e) => {
+                  setParcelasStr(e.target.value)
+                  const parsed = parseInt(e.target.value, 10)
+                  if (!isNaN(parsed) && parsed > 0) {
+                    if (onParcelasChange) onParcelasChange(parsed)
+                  }
+                }}
+                className="bg-white border-[#D1D1D1] w-full sm:w-48"
+                placeholder="Ex: 3"
+              />
+              {(() => {
+                const p = parseInt(parcelasStr, 10)
+                if (isNaN(p) || p <= 0) return null
+                const valorParcela = total / p
+                const items = []
+                for (let i = 1; i <= p; i++) {
+                  const dataVencimento = new Date()
+                  dataVencimento.setDate(dataVencimento.getDate() + i * 30)
+                  items.push(
+                    <div
+                      key={i}
+                      className="flex justify-between items-center py-2 border-b border-[#D1D1D1] last:border-0 text-sm"
+                    >
+                      <span className="text-muted-foreground">
+                        Parcela {i}/{p}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {dataVencimento.toLocaleDateString('pt-BR')}
+                      </span>
+                      <span className="font-medium text-foreground">
+                        R${' '}
+                        {valorParcela.toLocaleString('pt-BR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>,
+                  )
+                }
+                return (
+                  <div className="mt-4 p-4 bg-[#F5F5F7] rounded-md border border-[#D1D1D1]">
+                    <h4 className="text-sm font-semibold mb-3">Detalhamento das Parcelas</h4>
+                    <div className="max-h-60 overflow-y-auto pr-2">{items}</div>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
 
           {tipo === 'misto' && (
             <div className="space-y-3 pt-4 mt-2 border-t border-[#D1D1D1] animate-in fade-in slide-in-from-top-2">
