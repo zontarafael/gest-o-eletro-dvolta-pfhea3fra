@@ -15,9 +15,29 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
-import { ImageOff } from 'lucide-react'
+import { ImageOff, Printer, FileText } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useToast } from '@/hooks/use-toast'
 
 export function EstoqueTable({ produtos, loading, isAdmin, handleStatusChange }: any) {
+  const { toast } = useToast()
+
+  const handlePrintCabide = (produto: any) => {
+    toast({
+      title: 'Impressão de Cabide',
+      description: `Gerando layout de impressão para: ${produto.nome}`,
+    })
+    setTimeout(() => window.print(), 500)
+  }
+
+  const handlePrintDetalhes = (produto: any) => {
+    toast({
+      title: 'Impressão de Detalhes',
+      description: `Gerando ficha técnica para: ${produto.nome}`,
+    })
+    setTimeout(() => window.print(), 500)
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Em preparação':
@@ -48,18 +68,19 @@ export function EstoqueTable({ produtos, loading, isAdmin, handleStatusChange }:
             <TableHead className="font-semibold">Categoria</TableHead>
             <TableHead className="font-semibold">Qtd. Estoque</TableHead>
             <TableHead className="font-semibold">Status</TableHead>
+            <TableHead className="font-semibold text-right">Impressões</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                 Carregando catálogo...
               </TableCell>
             </TableRow>
           ) : produtos.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                 Nenhum produto cadastrado no estoque.
               </TableCell>
             </TableRow>
@@ -142,6 +163,28 @@ export function EstoqueTable({ produtos, loading, isAdmin, handleStatusChange }:
                       {p.status || 'Em preparação'}
                     </Badge>
                   )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handlePrintCabide(p)}
+                      title="Imprimir Cabide"
+                    >
+                      <Printer className="h-4 w-4 text-blue-600" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handlePrintDetalhes(p)}
+                      title="Imprimir Detalhes"
+                    >
+                      <FileText className="h-4 w-4 text-gray-600" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))
