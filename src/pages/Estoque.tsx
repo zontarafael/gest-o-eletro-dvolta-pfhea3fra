@@ -42,14 +42,18 @@ export default function Estoque() {
   const [isAdmin, setIsAdmin] = useState(false)
 
   const availableFields = [
+    { id: 'foto', label: 'Foto do Produto' },
     { id: 'codigo', label: 'Código do Produto' },
+    { id: 'cod_fabrica', label: 'Código de Fábrica' },
     { id: 'nome', label: 'Nome do Produto' },
     { id: 'categoria', label: 'Categoria' },
     { id: 'marca', label: 'Marca' },
+    { id: 'capacidade', label: 'Capacidade/Tamanho' },
     { id: 'quantidade', label: 'Quantidade em Estoque' },
     { id: 'custo_unitario', label: 'Custo Unitário' },
     { id: 'custos_totais', label: 'Custos Adicionais Totais' },
     { id: 'custo_final', label: 'Custo Final do Produto' },
+    { id: 'valor_site', label: 'Valor Sugerido pelo Site da Marca' },
     { id: 'preco_venda', label: 'Valor de Venda' },
     { id: 'lucro_bruto', label: 'Lucro Bruto' },
     { id: 'margem_lucro', label: 'Margem de Lucro' },
@@ -126,6 +130,18 @@ export default function Estoque() {
       })
     }
 
+    const summableFields = [
+      'quantidade',
+      'custo_unitario',
+      'custos_totais',
+      'custo_final',
+      'preco_venda',
+      'lucro_bruto',
+      'valor_site',
+    ]
+    const totals: Record<string, number> = {}
+    summableFields.forEach((f) => (totals[f] = 0))
+
     if (format === 'xls') {
       const headers = availableFields
         .filter((f) => selectedFields.includes(f.id))
@@ -143,11 +159,25 @@ export default function Estoque() {
         const lucroBruto = (p.preco_venda || 0) - (p.custo_final || 0)
         const margemLucro = p.preco_venda > 0 ? (lucroBruto / p.preco_venda) * 100 : 0
 
+        totals['quantidade'] += p.quantidade || 0
+        totals['custo_unitario'] += p.custo_unitario || 0
+        totals['custos_totais'] += custosTotais
+        totals['custo_final'] += p.custo_final || 0
+        totals['preco_venda'] += p.preco_venda || 0
+        totals['lucro_bruto'] += lucroBruto
+        totals['valor_site'] += p.valor_site || 0
+
         availableFields.forEach((f) => {
           if (selectedFields.includes(f.id)) {
             switch (f.id) {
+              case 'foto':
+                rowData.push(p.imagem_url || '')
+                break
               case 'codigo':
                 rowData.push(p.codigo || '')
+                break
+              case 'cod_fabrica':
+                rowData.push(p.cod_fabrica || '')
                 break
               case 'nome':
                 rowData.push(p.nome || '')
@@ -157,6 +187,9 @@ export default function Estoque() {
                 break
               case 'marca':
                 rowData.push(p.marca || '')
+                break
+              case 'capacidade':
+                rowData.push(p.capacidade || '')
                 break
               case 'quantidade':
                 rowData.push(p.quantidade || 0)
@@ -169,6 +202,9 @@ export default function Estoque() {
                 break
               case 'custo_final':
                 rowData.push(p.custo_final || 0)
+                break
+              case 'valor_site':
+                rowData.push(p.valor_site || 0)
                 break
               case 'preco_venda':
                 rowData.push(p.preco_venda || 0)
@@ -195,7 +231,25 @@ export default function Estoque() {
         return rowData.map((d) => `"${String(d).replace(/"/g, '""')}"`).join(',')
       })
 
-      const csvContent = [headers.map((h) => `"${h}"`).join(','), ...rows].join('\n')
+      let totalsRowData: any[] = []
+      let putTotalLabel = false
+      availableFields.forEach((f) => {
+        if (selectedFields.includes(f.id)) {
+          if (summableFields.includes(f.id)) {
+            totalsRowData.push(totals[f.id].toFixed(f.id === 'quantidade' ? 0 : 2))
+          } else {
+            if (!putTotalLabel) {
+              totalsRowData.push('TOTAL')
+              putTotalLabel = true
+            } else {
+              totalsRowData.push('')
+            }
+          }
+        }
+      })
+      const csvTotals = totalsRowData.map((d) => `"${String(d).replace(/"/g, '""')}"`).join(',')
+
+      const csvContent = [headers.map((h) => `"${h}"`).join(','), ...rows, csvTotals].join('\n')
       const blob = new Blob([new Uint8Array([0xef, 0xbb, 0xbf]), csvContent], {
         type: 'text/csv;charset=utf-8;',
       })
@@ -257,8 +311,14 @@ export default function Estoque() {
           availableFields.forEach((f) => {
             if (selectedFields.includes(f.id)) {
               switch (f.id) {
+                case 'foto':
+                  html += `<td>${p.imagem_url ? `<img src="${p.imagem_url}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" />` : ''}</td>`
+                  break
                 case 'codigo':
                   html += `<td>${p.codigo || ''}</td>`
+                  break
+                case 'cod_fabrica':
+                  html += `<td>${p.cod_fabrica || ''}</td>`
                   break
                 case 'nome':
                   html += `<td>${p.nome || ''}</td>`
@@ -268,6 +328,9 @@ export default function Estoque() {
                   break
                 case 'marca':
                   html += `<td>${p.marca || ''}</td>`
+                  break
+                case 'capacidade':
+                  html += `<td>${p.capacidade || ''}</td>`
                   break
                 case 'quantidade':
                   html += `<td>${p.quantidade || 0}</td>`
@@ -280,6 +343,9 @@ export default function Estoque() {
                   break
                 case 'custo_final':
                   html += `<td>R$ ${(p.custo_final || 0).toFixed(2)}</td>`
+                  break
+                case 'valor_site':
+                  html += `<td>R$ ${(p.valor_site || 0).toFixed(2)}</td>`
                   break
                 case 'preco_venda':
                   html += `<td>R$ ${(p.preco_venda || 0).toFixed(2)}</td>`
@@ -304,6 +370,29 @@ export default function Estoque() {
           })
           html += '</tr>'
         })
+
+        let putTotalLabelPdf = false
+        html += '<tfoot><tr style="background-color: #f5f5f7; font-weight: bold;">'
+        availableFields.forEach((f) => {
+          if (selectedFields.includes(f.id)) {
+            if (summableFields.includes(f.id)) {
+              const val = totals[f.id]
+              if (f.id === 'quantidade') {
+                html += `<td>${val}</td>`
+              } else {
+                html += `<td>R$ ${val.toFixed(2)}</td>`
+              }
+            } else {
+              if (!putTotalLabelPdf) {
+                html += `<td>TOTAL</td>`
+                putTotalLabelPdf = true
+              } else {
+                html += `<td></td>`
+              }
+            }
+          }
+        })
+        html += '</tr></tfoot>'
 
         html += `
                 </tbody>
