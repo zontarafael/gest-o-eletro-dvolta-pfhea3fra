@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Search, Plus, Image as ImageIcon } from 'lucide-react'
+import { Search, Plus, Image as ImageIcon, Eraser } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 
@@ -312,6 +312,28 @@ export function ProdutoForm({
   const valorLiquidoSite =
     (form.valorSite || 0) - ((form.valorSite || 0) * (form.taxaSite || 0)) / 100
 
+  const handleLimpar = () => {
+    let maxAdded = 0
+    for (const p of produtosAdicionados || []) {
+      if (p.codProduto) {
+        const match = String(p.codProduto).match(/\d+$/)
+        if (match) {
+          const num = parseInt(match[0], 10)
+          if (num > maxAdded) maxAdded = num
+        }
+      }
+    }
+    const nextNum = Math.max(baseNextCode, maxAdded) + 1
+
+    setForm({ ...defaultForm, codProduto: String(nextNum).padStart(4, '0') })
+    setBusca('')
+    setProdutoEncontrado(null)
+    setIsNovaCategoria(false)
+    if (produtoEditando && onCancelEdit) {
+      onCancelEdit()
+    }
+  }
+
   const handleAdd = () => {
     if (!form.nome || form.quantidade <= 0) return
     onAdd({ ...form, id: form.id || Date.now().toString() })
@@ -405,14 +427,24 @@ export function ProdutoForm({
                     </div>
                   )}
                 </div>
-                <Button
-                  type="button"
-                  onClick={handleBusca}
-                  variant="secondary"
-                  className="border-[#D1D1D1]"
-                >
-                  <Search className="w-4 h-4 mr-2" /> Buscar
-                </Button>
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    type="button"
+                    onClick={handleBusca}
+                    variant="secondary"
+                    className="border-[#D1D1D1]"
+                  >
+                    <Search className="w-4 h-4 mr-2" /> Buscar
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleLimpar}
+                    variant="outline"
+                    className="border-[#D1D1D1]"
+                  >
+                    <Eraser className="w-4 h-4 mr-2" /> Limpar
+                  </Button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
