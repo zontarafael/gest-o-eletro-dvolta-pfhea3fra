@@ -614,24 +614,6 @@ export function ProdutoForm({
                     onChange={(e) => setForm({ ...form, quantidade: Number(e.target.value) })}
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label>Imposto 1 (%)</Label>
-                  <Input
-                    type="number"
-                    className="bg-[#F5F5F7] border-[#D1D1D1]"
-                    value={form.imposto1}
-                    onChange={(e) => setForm({ ...form, imposto1: Number(e.target.value) })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Imposto 2 (%)</Label>
-                  <Input
-                    type="number"
-                    className="bg-[#F5F5F7] border-[#D1D1D1]"
-                    value={form.imposto2}
-                    onChange={(e) => setForm({ ...form, imposto2: Number(e.target.value) })}
-                  />
-                </div>
                 <div className="space-y-1 xl:col-span-2">
                   <Label>Observações</Label>
                   <Input
