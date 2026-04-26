@@ -42,6 +42,11 @@ export default function EditarVenda() {
   }, [id])
 
   const handleSave = async () => {
+    if (status === 'Editar') {
+      navigate(`/vendas/nova?edit=${id}`)
+      return
+    }
+
     setSaving(true)
     const { error } = await supabase.from('vendas').update({ status }).eq('id', id)
     setSaving(false)
@@ -119,6 +124,7 @@ export default function EditarVenda() {
                   <SelectItem value="Em Processamento">Em Processamento</SelectItem>
                   <SelectItem value="Concluído">Concluído</SelectItem>
                   <SelectItem value="Cancelado">Cancelado</SelectItem>
+                  <SelectItem value="Editar">Editar</SelectItem>
                 </SelectContent>
               </Select>
             </div>

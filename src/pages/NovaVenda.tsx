@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { ClienteSection } from '@/components/vendas/ClienteSection'
 import { ProdutosSection } from '@/components/vendas/ProdutosSection'
@@ -7,7 +7,7 @@ import { PagamentoSection, PagamentoMisto } from '@/components/vendas/PagamentoS
 import { AssinaturaSection } from '@/components/vendas/AssinaturaSection'
 import { ImpressoesSection } from '@/components/vendas/ImpressoesSection'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -16,6 +16,8 @@ export default function NovaVenda() {
   const { toast } = useToast()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
+  const editId = searchParams.get('edit')
 
   const [cliente, setCliente] = useState<any>(null)
   const [produtos, setProdutos] = useState<any[]>([])
@@ -28,6 +30,42 @@ export default function NovaVenda() {
   const [parcelas, setParcelas] = useState(1)
 
   const total = produtos.reduce((acc, p) => acc + p.preco * p.qtd, 0)
+
+  useEffect(() => {
+    if (!editId) return
+
+    const fetchVenda = async () => {
+      setLoading(true)
+      const { data: venda } = await supabase
+        .from('vendas')
+        .select('*, clientes(*)')
+        .eq('id', editId)
+        .single()
+
+      if (venda) {
+        if (venda.clientes) setCliente(venda.clientes)
+        setPagamento(venda.forma_pagamento || 'vista')
+        setAssinatura(venda.assinatura_digital || false)
+
+        const { data: itens } = await supabase
+          .from('venda_itens')
+          .select('*, produtos(*)')
+          .eq('venda_id', editId)
+
+        if (itens) {
+          const mappedProdutos = itens.map((i) => ({
+            id: i.produto_id || 'N/A',
+            nome: i.produtos?.nome || 'Produto Desconhecido',
+            preco: i.preco_unitario,
+            qtd: i.quantidade,
+          }))
+          setProdutos(mappedProdutos)
+        }
+      }
+      setLoading(false)
+    }
+    fetchVenda()
+  }, [editId])
 
   const handleSave = async () => {
     if (!user) return
@@ -116,40 +154,74 @@ export default function NovaVenda() {
       if (newC) clienteId = newC.id
     }
 
-    const { data: lastVenda } = await supabase
-      .from('vendas')
-      .select('codigo')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
+    let vendaId = editId
+    let codigo = ''
 
-    let nextNum = 1
-    if (lastVenda?.codigo) {
-      const match = lastVenda.codigo.match(/PED-(\d+)/)
-      if (match) {
-        nextNum = parseInt(match[1], 10) + 1
+    if (editId) {
+      const { data: currentVenda } = await supabase
+        .from('vendas')
+        .select('codigo')
+        .eq('id', editId)
+        .single()
+      codigo = currentVenda?.codigo || ''
+
+      await supabase
+        .from('vendas')
+        .update({
+          cliente_id: clienteId,
+          valor_total: total,
+          forma_pagamento: pagamento,
+          assinatura_digital: assinatura,
+        })
+        .eq('id', editId)
+    } else {
+      const { data: lastVenda } = await supabase
+        .from('vendas')
+        .select('codigo')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      let nextNum = 1
+      if (lastVenda?.codigo) {
+        const match = lastVenda.codigo.match(/PED-(\d+)/)
+        if (match) {
+          nextNum = parseInt(match[1], 10) + 1
+        }
       }
+      codigo = `PED-${nextNum.toString().padStart(4, '0')}`
+
+      const { data: venda } = await supabase
+        .from('vendas')
+        .insert({
+          user_id: user.id,
+          cliente_id: clienteId,
+          valor_total: total,
+          status: 'Concluído',
+          forma_pagamento: pagamento,
+          assinatura_digital: assinatura,
+          codigo,
+        })
+        .select()
+        .single()
+
+      if (venda) vendaId = venda.id
     }
-    const codigo = `PED-${nextNum.toString().padStart(4, '0')}`
 
-    const { data: venda } = await supabase
-      .from('vendas')
-      .insert({
-        user_id: user.id,
-        cliente_id: clienteId,
-        valor_total: total,
-        status: 'Concluído',
-        forma_pagamento: pagamento,
-        assinatura_digital: assinatura,
-        codigo,
-      })
-      .select()
-      .single()
+    if (vendaId) {
+      if (editId) {
+        await supabase.from('venda_itens').delete().eq('venda_id', editId)
+        if (codigo) {
+          await supabase
+            .from('movimentacoes_financeiras')
+            .delete()
+            .like('descricao', `Venda ${codigo}%`)
+        }
+      }
 
-    if (venda) {
       const itens = produtos
         .map((p) => ({
-          venda_id: venda.id,
+          venda_id: vendaId,
           produto_id: p.id !== 'N/A' ? p.id : null,
           quantidade: p.qtd,
           preco_unitario: p.preco,
@@ -218,7 +290,10 @@ export default function NovaVenda() {
     }
 
     setLoading(false)
-    toast({ title: 'Venda Registrada', description: 'Venda salva no banco de dados com sucesso.' })
+    toast({
+      title: editId ? 'Venda Atualizada' : 'Venda Registrada',
+      description: 'Venda salva no banco de dados com sucesso.',
+    })
     navigate('/vendas')
   }
 
@@ -236,22 +311,29 @@ export default function NovaVenda() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Nova Venda</h1>
-          <p className="text-sm text-muted-foreground mt-1">Registre um novo pedido de venda.</p>
+          <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
+            {editId ? 'Editar Venda' : 'Nova Venda'}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {editId
+              ? 'Atualize as informações do pedido de venda.'
+              : 'Registre um novo pedido de venda.'}
+          </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        <ClienteSection onChange={setCliente} />
-        <ProdutosSection onChange={setProdutos} />
+        <ClienteSection {...({ cliente } as any)} onChange={setCliente} />
+        <ProdutosSection {...({ produtos } as any)} onChange={setProdutos} />
         {TransporteSection && <TransporteSection />}
         <PagamentoSection
+          {...({ pagamento } as any)}
           total={total}
           onChange={setPagamento}
           onMistoChange={setPagamentosMistos}
           onParcelasChange={setParcelas}
         />
-        <AssinaturaSection onChange={setAssinatura} />
+        <AssinaturaSection {...({ assinatura } as any)} onChange={setAssinatura} />
         <ImpressoesSection />
 
         <div className="flex justify-end gap-4 pt-6 mt-4 border-t border-[#D1D1D1]">
@@ -263,7 +345,8 @@ export default function NovaVenda() {
             disabled={loading}
             className="gap-2 shadow-subtle px-8 transition-transform hover:-translate-y-0.5"
           >
-            <CheckCircle2 className="w-5 h-5" /> {loading ? 'Salvando...' : 'Finalizar Venda'}
+            <CheckCircle2 className="w-5 h-5" />{' '}
+            {loading ? 'Salvando...' : editId ? 'Salvar Alterações' : 'Finalizar Venda'}
           </Button>
         </div>
       </div>
