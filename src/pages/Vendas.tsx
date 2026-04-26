@@ -18,8 +18,10 @@ import {
   Download,
   Printer,
   CalendarIcon,
+  Search,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import {
@@ -46,8 +48,8 @@ type DateFilterOption = 'todos' | 'hoje' | 'ultimos-7-dias' | 'mes-atual' | 'per
 export default function Vendas() {
   const [pedidos, setPedidos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [metrics, setMetrics] = useState({ totalVendas: 0, ticketMedio: 0 })
 
+  const [searchTerm, setSearchTerm] = useState('')
   const [dateFilter, setDateFilter] = useState<DateFilterOption>('todos')
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
@@ -96,16 +98,25 @@ export default function Vendas() {
 
       if (data) {
         setPedidos(data)
-        const total = data.reduce((acc, p) => acc + Number(p.valor_total || 0), 0)
-        setMetrics({
-          totalVendas: data.length,
-          ticketMedio: data.length > 0 ? total / data.length : 0,
-        })
       }
       setLoading(false)
     }
     fetchPedidos()
   }, [dateFilter, dateRange])
+
+  const filteredPedidos = pedidos.filter((p) => {
+    const term = searchTerm.toLowerCase()
+    const codigoMatch = p.codigo?.toLowerCase().includes(term)
+    const clienteMatch = p.clientes?.nome?.toLowerCase().includes(term)
+    const valorMatch = String(p.valor_total).includes(term)
+    return codigoMatch || clienteMatch || valorMatch
+  })
+
+  const totalFilteredValue = filteredPedidos.reduce((acc, p) => acc + Number(p.valor_total || 0), 0)
+  const metrics = {
+    totalVendas: filteredPedidos.length,
+    ticketMedio: filteredPedidos.length > 0 ? totalFilteredValue / filteredPedidos.length : 0,
+  }
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -119,6 +130,17 @@ export default function Vendas() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full xl:w-auto flex-wrap">
+          <div className="relative w-full sm:w-auto">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar código, cliente..."
+              className="w-full sm:w-[250px] pl-8 bg-white shadow-subtle"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
           <Select value={dateFilter} onValueChange={(value: any) => setDateFilter(value)}>
             <SelectTrigger className="w-full sm:w-[160px] bg-white shadow-subtle">
               <SelectValue placeholder="Filtrar por data" />
@@ -260,14 +282,14 @@ export default function Vendas() {
                       Carregando pedidos...
                     </TableCell>
                   </TableRow>
-                ) : pedidos.length === 0 ? (
+                ) : filteredPedidos.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Nenhum pedido encontrado.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  pedidos.map((p) => (
+                  filteredPedidos.map((p) => (
                     <TableRow key={p.id} className="border-[#D1D1D1] hover:bg-[#F5F5F7]/50">
                       <TableCell className="font-medium">
                         <Link
