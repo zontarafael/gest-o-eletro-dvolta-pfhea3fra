@@ -72,6 +72,16 @@ export default function NovoProduto() {
       const proporcao = totalCustoProdutos > 0 ? custoTotalItem / totalCustoProdutos : 0
       const freteUnitario = p.quantidade > 0 ? (freteTotal * proporcao) / p.quantidade : 0
 
+      const totalDespesas = (p.despesasDetalhadas || []).reduce(
+        (acc: number, d: any) => acc + Number(d.valor || 0),
+        0,
+      )
+      const totalImpostos = (p.impostosDetalhados || []).reduce(
+        (acc: number, i: any) => acc + Number(i.valor || 0),
+        0,
+      )
+      const custoFinal = p.custoUnitario + totalDespesas + freteUnitario + totalImpostos
+
       return {
         user_id: user.id,
         codigo: p.codProduto,
@@ -87,11 +97,13 @@ export default function NovoProduto() {
         observacoes: p.observacoes,
         quantidade: p.quantidade,
         custo_unitario: p.custoUnitario,
-        imposto1: p.imposto1,
-        imposto2: p.imposto2,
+        despesas_detalhadas: p.despesasDetalhadas,
+        impostos_detalhados: p.impostosDetalhados,
+        despesas_adicionais: totalDespesas,
+        imposto1: totalImpostos,
+        custo_final: custoFinal,
         valor_frete_unitario: freteUnitario,
         preco_venda: p.precoVenda || 0,
-        despesas_adicionais: p.despesasAdicionais || 0,
         valor_site: p.valorSite || 0,
         taxa_site: p.taxaSite || 0,
         fornecedor_id: fornecedorId,
