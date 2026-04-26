@@ -1,49 +1,80 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Search, Plus, Trash2, User } from 'lucide-react'
+import { Plus, Trash2, User, ChevronsUpDown, Check, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { cn } from '@/lib/utils'
+import { ClienteFormSheet } from '@/pages/clientes/ClienteFormSheet'
 
 export function ClienteSection({ onChange }: { onChange?: (c: any) => void }) {
-  const [search, setSearch] = useState('')
+  const [openPopover, setOpenPopover] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedTerm, setDebouncedTerm] = useState('')
+  const [clientes, setClientes] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+
   const [hasSearched, setHasSearched] = useState(false)
   const [customer, setCustomer] = useState<any>(null)
   const [phones, setPhones] = useState<string[]>([''])
+  const [sheetOpen, setSheetOpen] = useState(false)
 
-  const handleSearch = async () => {
-    if (!search.trim()) return
-    setHasSearched(true)
+  // Debounce para a busca
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedTerm(searchTerm), 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
 
-    const { data } = await supabase
-      .from('clientes')
-      .select('*')
-      .or(`nome.ilike.%${search}%,documento.ilike.%${search}%`)
-      .limit(1)
-      .single()
-
-    if (data) {
-      setCustomer(data)
-      setPhones(data.telefones && data.telefones.length > 0 ? data.telefones : [''])
-      if (onChange) onChange({ ...data, telefones: data.telefones })
-    } else {
-      const empty = {
-        nome: '',
-        documento: '',
-        rua: '',
-        numero: '',
-        bairro: '',
-        referencia: '',
-        cidade: '',
-        estado: '',
-        cep: '',
-        email: '',
+  // Efetua a busca de clientes no Supabase
+  useEffect(() => {
+    const fetchClientes = async () => {
+      setLoading(true)
+      if (!debouncedTerm) {
+        // Mostra os últimos clientes cadastrados quando o campo estiver vazio
+        const { data } = await supabase
+          .from('clientes')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(5)
+        setClientes(data || [])
+      } else {
+        const { data } = await supabase
+          .from('clientes')
+          .select('*')
+          .or(`nome.ilike.%${debouncedTerm}%,documento.ilike.%${debouncedTerm}%`)
+          .limit(10)
+        setClientes(data || [])
       }
-      setCustomer(empty)
-      setPhones([''])
-      if (onChange) onChange({ ...empty, telefones: [''] })
+      setLoading(false)
     }
+
+    if (openPopover) {
+      fetchClientes()
+    }
+  }, [debouncedTerm, openPopover])
+
+  const handleSelectCliente = (cliente: any) => {
+    setCustomer(cliente)
+    const newPhones = cliente.telefones && cliente.telefones.length > 0 ? cliente.telefones : ['']
+    setPhones(newPhones)
+    if (onChange) onChange({ ...cliente, telefones: newPhones })
+    setOpenPopover(false)
+    setHasSearched(true)
+  }
+
+  const handleNewClientSuccess = (newClient: any) => {
+    setSheetOpen(false)
+    handleSelectCliente(newClient)
   }
 
   const updateCustomer = (field: string, val: string) => {
@@ -73,28 +104,88 @@ export function ClienteSection({ onChange }: { onChange?: (c: any) => void }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex flex-col sm:flex-row gap-2 items-end">
-          <div className="space-y-2 flex-1 w-full">
-            <Label>Buscar Cliente (Nome ou CPF/CNPJ)</Label>
-            <Input
-              placeholder="Digite para buscar e tecle Enter..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-            />
-          </div>
-          <Button onClick={handleSearch} type="button" className="gap-2 w-full sm:w-auto shadow-sm">
-            <Search className="w-4 h-4" /> Buscar
-          </Button>
+        <div className="flex flex-col space-y-2">
+          <Label>Buscar Cliente (Nome ou CPF/CNPJ)</Label>
+          <Popover open={openPopover} onOpenChange={setOpenPopover}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={openPopover}
+                className="w-full justify-between bg-[#F5F5F7] border-[#D1D1D1] hover:bg-[#EAEAEA] shadow-sm font-normal text-left"
+              >
+                {customer && customer.id ? customer.nome : 'Selecione ou busque um cliente...'}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+              <Command shouldFilter={false}>
+                <CommandInput
+                  placeholder="Digite o nome, CPF ou CNPJ..."
+                  value={searchTerm}
+                  onValueChange={setSearchTerm}
+                />
+                <CommandList>
+                  <CommandEmpty className="py-6 text-center text-sm">
+                    <p className="text-muted-foreground mb-4">Nenhum cliente encontrado.</p>
+                    <Button
+                      onClick={() => {
+                        setOpenPopover(false)
+                        setSheetOpen(true)
+                      }}
+                      size="sm"
+                      className="gap-2 shadow-sm"
+                    >
+                      <UserPlus className="w-4 h-4" /> Cadastrar Novo Cliente
+                    </Button>
+                  </CommandEmpty>
+                  <CommandGroup>
+                    {loading && (
+                      <div className="p-4 text-center text-sm text-muted-foreground animate-pulse">
+                        Buscando...
+                      </div>
+                    )}
+                    {!loading &&
+                      clientes.map((c) => (
+                        <CommandItem
+                          key={c.id}
+                          value={c.id}
+                          onSelect={() => handleSelectCliente(c)}
+                        >
+                          <Check
+                            className={cn(
+                              'mr-2 h-4 w-4',
+                              customer?.id === c.id ? 'opacity-100' : 'opacity-0',
+                            )}
+                          />
+                          <div className="flex flex-col">
+                            <span className="font-medium">{c.nome}</span>
+                            {c.documento && (
+                              <span className="text-xs text-muted-foreground">{c.documento}</span>
+                            )}
+                          </div>
+                        </CommandItem>
+                      ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
+
+        {/* Modal/Sheet para criação de um novo cliente sem sair da tela */}
+        <ClienteFormSheet
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          onSuccess={handleNewClientSuccess}
+        />
 
         {hasSearched && customer && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-[#D1D1D1] animate-fade-in">
             <div className="space-y-2">
               <Label>Nome</Label>
               <Input
-                value={customer.nome}
+                value={customer.nome || ''}
                 onChange={(e) => updateCustomer('nome', e.target.value)}
                 className="bg-[#F5F5F7] border-[#D1D1D1]"
               />
@@ -102,7 +193,7 @@ export function ClienteSection({ onChange }: { onChange?: (c: any) => void }) {
             <div className="space-y-2">
               <Label>CPF ou CNPJ</Label>
               <Input
-                value={customer.documento}
+                value={customer.documento || ''}
                 onChange={(e) => updateCustomer('documento', e.target.value)}
                 className="bg-[#F5F5F7] border-[#D1D1D1]"
               />
@@ -110,7 +201,7 @@ export function ClienteSection({ onChange }: { onChange?: (c: any) => void }) {
             <div className="space-y-2">
               <Label>CEP</Label>
               <Input
-                value={customer.cep}
+                value={customer.cep || ''}
                 onChange={(e) => updateCustomer('cep', e.target.value)}
                 className="bg-[#F5F5F7] border-[#D1D1D1]"
               />
@@ -118,7 +209,7 @@ export function ClienteSection({ onChange }: { onChange?: (c: any) => void }) {
             <div className="space-y-2">
               <Label>Nome da Rua</Label>
               <Input
-                value={customer.rua}
+                value={customer.rua || ''}
                 onChange={(e) => updateCustomer('rua', e.target.value)}
                 className="bg-[#F5F5F7] border-[#D1D1D1]"
               />
@@ -126,7 +217,7 @@ export function ClienteSection({ onChange }: { onChange?: (c: any) => void }) {
             <div className="space-y-2">
               <Label>Número</Label>
               <Input
-                value={customer.numero}
+                value={customer.numero || ''}
                 onChange={(e) => updateCustomer('numero', e.target.value)}
                 className="bg-[#F5F5F7] border-[#D1D1D1]"
               />
@@ -134,7 +225,7 @@ export function ClienteSection({ onChange }: { onChange?: (c: any) => void }) {
             <div className="space-y-2">
               <Label>Bairro</Label>
               <Input
-                value={customer.bairro}
+                value={customer.bairro || ''}
                 onChange={(e) => updateCustomer('bairro', e.target.value)}
                 className="bg-[#F5F5F7] border-[#D1D1D1]"
               />
@@ -142,7 +233,7 @@ export function ClienteSection({ onChange }: { onChange?: (c: any) => void }) {
             <div className="space-y-2">
               <Label>Referência</Label>
               <Input
-                value={customer.referencia}
+                value={customer.referencia || ''}
                 onChange={(e) => updateCustomer('referencia', e.target.value)}
                 className="bg-[#F5F5F7] border-[#D1D1D1]"
               />
@@ -150,7 +241,7 @@ export function ClienteSection({ onChange }: { onChange?: (c: any) => void }) {
             <div className="space-y-2">
               <Label>Cidade</Label>
               <Input
-                value={customer.cidade}
+                value={customer.cidade || ''}
                 onChange={(e) => updateCustomer('cidade', e.target.value)}
                 className="bg-[#F5F5F7] border-[#D1D1D1]"
               />
@@ -158,7 +249,7 @@ export function ClienteSection({ onChange }: { onChange?: (c: any) => void }) {
             <div className="space-y-2">
               <Label>Estado</Label>
               <Input
-                value={customer.estado}
+                value={customer.estado || ''}
                 onChange={(e) => updateCustomer('estado', e.target.value)}
                 className="bg-[#F5F5F7] border-[#D1D1D1]"
               />
@@ -166,7 +257,7 @@ export function ClienteSection({ onChange }: { onChange?: (c: any) => void }) {
             <div className="space-y-2">
               <Label>E-mail</Label>
               <Input
-                value={customer.email}
+                value={customer.email || ''}
                 onChange={(e) => updateCustomer('email', e.target.value)}
                 className="bg-[#F5F5F7] border-[#D1D1D1]"
               />

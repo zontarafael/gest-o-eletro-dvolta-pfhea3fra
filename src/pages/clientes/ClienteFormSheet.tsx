@@ -15,10 +15,24 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 
-export function ClienteFormSheet({ onSuccess }: { onSuccess: (cliente: any) => void }) {
+export function ClienteFormSheet({
+  onSuccess,
+  trigger,
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
+}: {
+  onSuccess: (cliente: any) => void
+  trigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled ? setControlledOpen : setInternalOpen
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     nome: '',
@@ -92,11 +106,17 @@ export function ClienteFormSheet({ onSuccess }: { onSuccess: (cliente: any) => v
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button className="shadow-subtle hover:-translate-y-0.5 transition-transform rounded-lg gap-2">
-          <UserPlus className="w-4 h-4" /> Novo Cliente
-        </Button>
-      </SheetTrigger>
+      {trigger ? (
+        <SheetTrigger asChild>{trigger}</SheetTrigger>
+      ) : (
+        !isControlled && (
+          <SheetTrigger asChild>
+            <Button className="shadow-subtle hover:-translate-y-0.5 transition-transform rounded-lg gap-2">
+              <UserPlus className="w-4 h-4" /> Novo Cliente
+            </Button>
+          </SheetTrigger>
+        )
+      )}
       <SheetContent className="overflow-y-auto sm:max-w-md w-full">
         <SheetHeader>
           <SheetTitle>Novo Cliente</SheetTitle>
