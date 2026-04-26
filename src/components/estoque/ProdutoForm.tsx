@@ -66,6 +66,7 @@ export function ProdutoForm({
     despesasDetalhadas: [{ descricao: '', valor: 0 }],
     impostosDetalhados: [{ descricao: '', valor: 0 }],
     imagemUrl: '',
+    precoSugerido: 0,
     precoVenda: 0,
     valorSite: 0,
     taxaSite: 0,
@@ -125,7 +126,14 @@ export function ProdutoForm({
 
   useEffect(() => {
     if (produtoEditando) {
-      setForm(produtoEditando)
+      const valSite = Number(produtoEditando.valorSite || produtoEditando.valor_site || 0)
+      const taxa = Number(produtoEditando.taxaSite || produtoEditando.taxa_site || 0)
+      const precoSug = valSite - (valSite * taxa) / 100
+
+      setForm({
+        ...produtoEditando,
+        precoSugerido: produtoEditando.precoSugerido ?? precoSug,
+      })
       const isKnownCat = produtoEditando.categoria
         ? Object.keys(CATEGORY_MAP).includes(produtoEditando.categoria)
         : false
@@ -185,6 +193,12 @@ export function ProdutoForm({
     } else {
       setIsNovaCategoria(false)
     }
+
+    const precoSugeridoCalc = produto.valor_site
+      ? Number(produto.valor_site) -
+        (Number(produto.valor_site) * Number(produto.taxa_site || 0)) / 100
+      : 0
+
     setForm({
       ...form,
       categoria: produto.categoria || '',
@@ -209,6 +223,7 @@ export function ProdutoForm({
           ? produto.impostos_detalhados
           : [{ descricao: '', valor: 0 }],
       imagemUrl: produto.imagem_url || '',
+      precoSugerido: precoSugeridoCalc,
       precoVenda: Number(produto.preco_venda) || 0,
       valorSite: Number(produto.valor_site) || 0,
       taxaSite: Number(produto.taxa_site) || 0,
@@ -234,6 +249,11 @@ export function ProdutoForm({
       } else {
         setIsNovaCategoria(false)
       }
+
+      const precoSugeridoCalc = data.valor_site
+        ? Number(data.valor_site) - (Number(data.valor_site) * Number(data.taxa_site || 0)) / 100
+        : 0
+
       setForm({
         ...form,
         categoria: data.categoria || '',
@@ -258,6 +278,7 @@ export function ProdutoForm({
             ? data.impostos_detalhados
             : [{ descricao: '', valor: 0 }],
         imagemUrl: data.imagem_url || '',
+        precoSugerido: precoSugeridoCalc,
         precoVenda: Number(data.preco_venda) || 0,
         valorSite: Number(data.valor_site) || 0,
         taxaSite: Number(data.taxa_site) || 0,
@@ -314,8 +335,9 @@ export function ProdutoForm({
     (acc: number, d: any) => acc + Number(d.valor || 0),
     0,
   )
+
   const totalImpostos = (form.impostosDetalhados || []).reduce(
-    (acc: number, i: any) => acc + Number(i.valor || 0),
+    (acc: number, i: any) => acc + (Number(i.valor || 0) / 100) * Number(form.custoUnitario || 0),
     0,
   )
 
@@ -764,17 +786,22 @@ export function ProdutoForm({
                         setForm({ ...form, impostosDetalhados: newImpostos })
                       }}
                     />
-                    <Input
-                      type="number"
-                      placeholder="Valor (R$)"
-                      className="bg-[#F5F5F7] border-[#D1D1D1] w-28 shrink-0"
-                      value={imposto.valor || ''}
-                      onChange={(e) => {
-                        const newImpostos = [...form.impostosDetalhados]
-                        newImpostos[index].valor = Number(e.target.value)
-                        setForm({ ...form, impostosDetalhados: newImpostos })
-                      }}
-                    />
+                    <div className="relative w-28 shrink-0">
+                      <Input
+                        type="number"
+                        placeholder="Valor"
+                        className="bg-[#F5F5F7] border-[#D1D1D1] w-full pr-8"
+                        value={imposto.valor || ''}
+                        onChange={(e) => {
+                          const newImpostos = [...form.impostosDetalhados]
+                          newImpostos[index].valor = Number(e.target.value)
+                          setForm({ ...form, impostosDetalhados: newImpostos })
+                        }}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                        %
+                      </span>
+                    </div>
                     {index === form.impostosDetalhados.length - 1 ? (
                       <Button
                         type="button"
@@ -827,6 +854,7 @@ export function ProdutoForm({
             <div className="space-y-6 flex flex-col justify-between">
               <div className="space-y-6 bg-[#F5F5F7]/50 p-4 rounded-xl border border-[#D1D1D1]">
                 <h4 className="font-semibold text-sm text-foreground mb-4">Referências de Preço</h4>
+
                 <div className="space-y-1">
                   <Label>Valor Sugerido Pelo Site da Marca (R$)</Label>
                   <Input
@@ -836,10 +864,11 @@ export function ProdutoForm({
                     onChange={(e) => {
                       const valorSite = Number(e.target.value)
                       const precoSugerido = valorSite - (valorSite * (form.taxaSite || 0)) / 100
-                      setForm({ ...form, valorSite, precoVenda: precoSugerido })
+                      setForm({ ...form, valorSite, precoSugerido })
                     }}
                   />
                 </div>
+
                 <div className="space-y-1">
                   <Label>Percentual de Desconto Abaixo do Site (%)</Label>
                   <Input
@@ -850,15 +879,27 @@ export function ProdutoForm({
                       const taxaSite = Number(e.target.value)
                       const precoSugerido =
                         (form.valorSite || 0) - ((form.valorSite || 0) * taxaSite) / 100
-                      setForm({ ...form, taxaSite, precoVenda: precoSugerido })
+                      setForm({ ...form, taxaSite, precoSugerido })
                     }}
                   />
                   <p className="text-[11px] text-muted-foreground mt-1 leading-tight">
-                    O Preço de Venda será sugerido automaticamente com base neste desconto.
+                    O Preço Sugerido de Venda será calculado automaticamente com base neste
+                    desconto.
                   </p>
                 </div>
+
                 <div className="space-y-1 pt-4 border-t border-[#D1D1D1]">
-                  <Label className="text-lg text-primary">Preço de Venda Final (R$)</Label>
+                  <Label className="text-lg">Preço Sugerido de Venda Final (R$)</Label>
+                  <Input
+                    type="number"
+                    readOnly
+                    className="bg-[#E5E5E5] border-[#D1D1D1] text-muted-foreground text-lg font-bold max-w-[200px]"
+                    value={form.precoSugerido || ''}
+                  />
+                </div>
+
+                <div className="space-y-1 pt-4 border-t border-[#D1D1D1]">
+                  <Label className="text-lg text-primary">Valor de Venda do Produto (R$)</Label>
                   <Input
                     type="number"
                     className="bg-white border-primary/50 focus-visible:ring-primary/30 max-w-[200px] text-lg font-bold text-primary"
@@ -866,24 +907,26 @@ export function ProdutoForm({
                     onChange={(e) => setForm({ ...form, precoVenda: Number(e.target.value) })}
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 bg-white rounded-lg border border-[#D1D1D1] flex flex-col justify-center text-center">
-                  <span className="text-sm font-medium text-muted-foreground">Lucro Bruto</span>
-                  <span
-                    className={`text-2xl font-bold ${lucroBruto >= 0 ? 'text-green-600' : 'text-red-600'}`}
-                  >
-                    R$ {lucroBruto.toFixed(2)}
-                  </span>
-                </div>
-                <div className="p-4 bg-white rounded-lg border border-[#D1D1D1] flex flex-col justify-center text-center">
-                  <span className="text-sm font-medium text-muted-foreground">Margem de Lucro</span>
-                  <span
-                    className={`text-2xl font-bold ${margemLucro >= 0 ? 'text-green-600' : 'text-red-600'}`}
-                  >
-                    {margemLucro.toFixed(2)}%
-                  </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-[#D1D1D1]">
+                  <div className="space-y-1">
+                    <Label className="text-base">Lucro Bruto (R$)</Label>
+                    <Input
+                      type="text"
+                      readOnly
+                      className={`bg-[#E5E5E5] border-[#D1D1D1] font-bold max-w-[200px] ${lucroBruto >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                      value={lucroBruto.toFixed(2)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-base">Margem de Lucro (%)</Label>
+                    <Input
+                      type="text"
+                      readOnly
+                      className={`bg-[#E5E5E5] border-[#D1D1D1] font-bold max-w-[200px] ${margemLucro >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                      value={margemLucro.toFixed(2)}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
