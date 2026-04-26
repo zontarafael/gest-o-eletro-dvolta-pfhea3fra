@@ -85,6 +85,16 @@
     color: hsl(var(--foreground));
   }
 
+  /* Ocultar as setas de incremento/decremento de inputs numéricos */
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
   section[aria-label='Notifications alt+T'] {
     padding: 0 !important;
     margin: 0 !important;

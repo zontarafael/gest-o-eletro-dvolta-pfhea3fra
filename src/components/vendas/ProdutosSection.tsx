@@ -241,7 +241,7 @@ export function ProdutosSection({ onChange }: { onChange?: (p: any[]) => void })
                         min={1}
                         value={p.qtd}
                         onChange={(e) => updateQtd(p.key, parseInt(e.target.value) || 1)}
-                        className="h-8 bg-[#F5F5F7] border-[#D1D1D1] px-2 text-center"
+                        className="h-8 bg-[#F5F5F7] border-[#D1D1D1] px-2 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </TableCell>
                     <TableCell>
@@ -251,7 +251,7 @@ export function ProdutosSection({ onChange }: { onChange?: (p: any[]) => void })
                         step="0.01"
                         value={p.preco}
                         onChange={(e) => updatePreco(p.key, parseFloat(e.target.value) || 0)}
-                        className="h-8 bg-[#F5F5F7] border-[#D1D1D1] px-2"
+                        className="h-8 bg-[#F5F5F7] border-[#D1D1D1] px-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </TableCell>
                     <TableCell className="font-bold text-primary">
