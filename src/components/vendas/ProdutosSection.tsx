@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, Package } from 'lucide-react'
+import { Plus, Trash2, Package, Check, ChevronsUpDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import { cn } from '@/lib/utils'
 import {
   Table,
   TableBody,
@@ -13,38 +14,75 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 
 export function ProdutosSection({ onChange }: { onChange?: (p: any[]) => void }) {
+  const [tipoProduto, setTipoProduto] = useState<string>('')
+  const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [produtosList, setProdutosList] = useState<any[]>([])
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null)
+
   const [selectedProducts, setSelectedProducts] = useState<any[]>([])
 
-  const handleAddProduct = async () => {
-    if (!search.trim()) return
+  useEffect(() => {
+    if (!open) return
+    const fetchProdutos = async () => {
+      let query = supabase.from('produtos').select('*').limit(20)
+      if (search) {
+        query = query.ilike('nome', `%${search}%`)
+      }
+      const { data } = await query
+      setProdutosList(data || [])
+    }
+    const timer = setTimeout(fetchProdutos, 300)
+    return () => clearTimeout(timer)
+  }, [search, open])
 
-    const { data } = await supabase
-      .from('produtos')
-      .select('*')
-      .ilike('nome', `%${search}%`)
-      .limit(1)
-      .single()
+  const handleAddProduct = () => {
+    if (!selectedProduct && !search.trim()) return
 
     let newP
-    if (data) {
+    if (selectedProduct) {
       newP = {
-        id: data.id,
-        nome: data.nome,
-        preco: Number(data.custo_unitario) * 1.5,
+        id: selectedProduct.id,
+        nome: selectedProduct.nome,
+        preco: Number(selectedProduct.preco_venda || selectedProduct.custo_unitario * 1.5 || 0),
         qtd: 1,
+        tipo: tipoProduto,
         key: Date.now(),
       }
     } else {
-      newP = { id: 'N/A', nome: search, preco: 0, qtd: 1, key: Date.now() }
+      newP = {
+        id: 'N/A',
+        nome: search,
+        preco: 0,
+        qtd: 1,
+        tipo: tipoProduto,
+        key: Date.now(),
+      }
     }
 
     const newList = [...selectedProducts, newP]
-    setSelectedProducts(newList)
-    if (onChange) onChange(newList)
+    updateList(newList)
     setSearch('')
+    setSelectedProduct(null)
+    setTipoProduto('') // Reseta a natureza para forçar a escolha no próximo item
   }
 
   const updateList = (newList: any[]) => {
@@ -76,21 +114,102 @@ export function ProdutosSection({ onChange }: { onChange?: (p: any[]) => void })
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex flex-col sm:flex-row gap-2 items-end">
-          <div className="space-y-2 flex-1 w-full">
-            <Label>Buscar Produto no Estoque</Label>
-            <Input
-              placeholder="Digite o nome do produto e tecle Enter..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddProduct()}
-              className="bg-[#F5F5F7] border-[#D1D1D1]"
-            />
+        <div className="flex flex-col md:flex-row gap-4 items-end">
+          <div className="space-y-2 flex-1">
+            <Label>Natureza do Produto</Label>
+            <Select value={tipoProduto} onValueChange={setTipoProduto}>
+              <SelectTrigger className="bg-[#F5F5F7] border-[#D1D1D1]">
+                <SelectValue placeholder="Selecione a natureza..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Produto Novo">Produto Novo</SelectItem>
+                <SelectItem value="Produto com Avaria">Produto com Avaria</SelectItem>
+                <SelectItem value="Outros">Outros</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          <div className="space-y-2 flex-[2]">
+            <Label>Buscar Produto no Estoque</Label>
+            <Popover
+              open={open}
+              onOpenChange={(val) => {
+                if (tipoProduto) setOpen(val)
+              }}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={open}
+                  className={cn(
+                    'w-full justify-between bg-[#F5F5F7] border-[#D1D1D1]',
+                    !selectedProduct && 'text-muted-foreground',
+                  )}
+                  disabled={!tipoProduto}
+                >
+                  {selectedProduct ? selectedProduct.nome : 'Selecione ou digite um produto...'}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] md:w-[500px] p-0" align="start">
+                <Command>
+                  <CommandInput
+                    placeholder="Digite o nome do produto..."
+                    value={search}
+                    onValueChange={setSearch}
+                  />
+                  <CommandList>
+                    <CommandEmpty>
+                      <div className="p-4 text-center text-sm text-muted-foreground flex flex-col gap-2">
+                        <span>Nenhum produto encontrado.</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setOpen(false)
+                            setSelectedProduct(null)
+                          }}
+                        >
+                          Usar "{search}" como produto não cadastrado
+                        </Button>
+                      </div>
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {produtosList.map((produto) => (
+                        <CommandItem
+                          key={produto.id}
+                          value={produto.nome}
+                          onSelect={() => {
+                            setSelectedProduct(produto)
+                            setSearch('')
+                            setOpen(false)
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              'mr-2 h-4 w-4',
+                              selectedProduct?.id === produto.id ? 'opacity-100' : 'opacity-0',
+                            )}
+                          />
+                          <span className="flex-1 truncate">{produto.nome}</span>
+                          <span className="ml-2 text-xs text-muted-foreground shrink-0">
+                            Estoque: {produto.quantidade || 0}
+                          </span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
           <Button
             type="button"
             onClick={handleAddProduct}
-            className="gap-2 w-full sm:w-auto shadow-sm"
+            disabled={!tipoProduto || (!selectedProduct && !search.trim())}
+            className="gap-2 w-full md:w-auto shadow-sm"
           >
             <Plus className="w-4 h-4" /> Adicionar
           </Button>
@@ -102,6 +221,7 @@ export function ProdutosSection({ onChange }: { onChange?: (p: any[]) => void })
               <TableHeader className="bg-[#F5F5F7]">
                 <TableRow className="border-[#D1D1D1]">
                   <TableHead className="font-semibold text-foreground">Produto</TableHead>
+                  <TableHead className="font-semibold text-foreground">Natureza</TableHead>
                   <TableHead className="w-24 font-semibold text-foreground">Qtd</TableHead>
                   <TableHead className="w-40 font-semibold text-foreground">
                     Preço Un. (R$)
@@ -114,6 +234,7 @@ export function ProdutosSection({ onChange }: { onChange?: (p: any[]) => void })
                 {selectedProducts.map((p) => (
                   <TableRow key={p.key} className="border-[#D1D1D1]">
                     <TableCell className="font-medium">{p.nome}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{p.tipo}</TableCell>
                     <TableCell>
                       <Input
                         type="number"
