@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { ClienteSection } from '@/components/vendas/ClienteSection'
 import { ProdutosSection } from '@/components/vendas/ProdutosSection'
 import { TransporteSection } from '@/components/vendas/TransporteSection'
-import { PagamentoSection } from '@/components/vendas/PagamentoSection'
+import { PagamentoSection, PagamentoMisto } from '@/components/vendas/PagamentoSection'
 import { AssinaturaSection } from '@/components/vendas/AssinaturaSection'
 import { ImpressoesSection } from '@/components/vendas/ImpressoesSection'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
@@ -20,6 +20,9 @@ export default function NovaVenda() {
   const [cliente, setCliente] = useState<any>(null)
   const [produtos, setProdutos] = useState<any[]>([])
   const [pagamento, setPagamento] = useState('vista')
+  const [pagamentosMistos, setPagamentosMistos] = useState<PagamentoMisto[]>([
+    { forma: '', valor: 0 },
+  ])
   const [assinatura, setAssinatura] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -40,6 +43,30 @@ export default function NovaVenda() {
         variant: 'destructive',
       })
       return
+    }
+
+    const total = produtos.reduce((acc, p) => acc + p.preco * p.qtd, 0)
+
+    if (pagamento === 'misto') {
+      const mistoTotal = pagamentosMistos.reduce((acc, pm) => acc + (pm.valor || 0), 0)
+      if (Math.abs(mistoTotal - total) > 0.01) {
+        toast({
+          title: 'Atenção',
+          description: `A soma dos pagamentos (R$ ${mistoTotal.toFixed(2)}) deve ser igual ao total da venda (R$ ${total.toFixed(2)}).`,
+          variant: 'destructive',
+        })
+        return
+      }
+
+      const hasEmptyForma = pagamentosMistos.some((pm) => !pm.forma)
+      if (hasEmptyForma) {
+        toast({
+          title: 'Atenção',
+          description: 'Selecione a forma de pagamento para todos os itens mistos.',
+          variant: 'destructive',
+        })
+        return
+      }
     }
 
     setLoading(true)
@@ -66,7 +93,6 @@ export default function NovaVenda() {
       if (newC) clienteId = newC.id
     }
 
-    const total = produtos.reduce((acc, p) => acc + p.preco * p.qtd, 0)
     const codigo = `PED-${Math.floor(1000 + Math.random() * 9000)}`
 
     const { data: venda } = await supabase
@@ -98,13 +124,24 @@ export default function NovaVenda() {
         await supabase.from('venda_itens').insert(itens)
       }
 
-      await supabase.from('movimentacoes_financeiras').insert({
-        user_id: user.id,
-        descricao: `Venda ${codigo} - ${cliente.nome}`,
-        tipo: 'Receita',
-        valor: total,
-        status: 'Liquidado',
-      })
+      if (pagamento === 'misto' && pagamentosMistos.length > 0) {
+        const movimentacoes = pagamentosMistos.map((pm) => ({
+          user_id: user.id,
+          descricao: `Venda ${codigo} - ${cliente.nome} (${pm.forma})`,
+          tipo: 'Receita',
+          valor: pm.valor,
+          status: 'Liquidado',
+        }))
+        await supabase.from('movimentacoes_financeiras').insert(movimentacoes)
+      } else {
+        await supabase.from('movimentacoes_financeiras').insert({
+          user_id: user.id,
+          descricao: `Venda ${codigo} - ${cliente.nome}`,
+          tipo: 'Receita',
+          valor: total,
+          status: 'Liquidado',
+        })
+      }
     }
 
     setLoading(false)
@@ -135,7 +172,7 @@ export default function NovaVenda() {
         <ClienteSection onChange={setCliente} />
         <ProdutosSection onChange={setProdutos} />
         {TransporteSection && <TransporteSection />}
-        <PagamentoSection onChange={setPagamento} />
+        <PagamentoSection onChange={setPagamento} onMistoChange={setPagamentosMistos} />
         <AssinaturaSection onChange={setAssinatura} />
         <ImpressoesSection />
 

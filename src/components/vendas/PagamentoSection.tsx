@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -7,9 +8,48 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
-import { CreditCard } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { CreditCard, Plus, Trash2 } from 'lucide-react'
 
-export function PagamentoSection({ onChange }: { onChange?: (v: string) => void }) {
+export interface PagamentoMisto {
+  forma: string
+  valor: number
+}
+
+interface PagamentoSectionProps {
+  onChange?: (v: string) => void
+  onMistoChange?: (pagamentos: PagamentoMisto[]) => void
+}
+
+export function PagamentoSection({ onChange, onMistoChange }: PagamentoSectionProps) {
+  const [tipo, setTipo] = useState('vista')
+  const [mistos, setMistos] = useState<PagamentoMisto[]>([{ forma: '', valor: 0 }])
+
+  const handleTipoChange = (val: string) => {
+    setTipo(val)
+    if (onChange) onChange(val)
+  }
+
+  const addMisto = () => {
+    const newMistos = [...mistos, { forma: '', valor: 0 }]
+    setMistos(newMistos)
+    if (onMistoChange) onMistoChange(newMistos)
+  }
+
+  const removeMisto = (index: number) => {
+    const newMistos = mistos.filter((_, i) => i !== index)
+    setMistos(newMistos)
+    if (onMistoChange) onMistoChange(newMistos)
+  }
+
+  const updateMisto = (index: number, field: keyof PagamentoMisto, value: string | number) => {
+    const newMistos = [...mistos]
+    newMistos[index] = { ...newMistos[index], [field]: value }
+    setMistos(newMistos)
+    if (onMistoChange) onMistoChange(newMistos)
+  }
+
   return (
     <Card className="border-[#D1D1D1] shadow-subtle bg-white">
       <CardHeader className="pb-4">
@@ -18,23 +58,81 @@ export function PagamentoSection({ onChange }: { onChange?: (v: string) => void 
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2">
-          <Label>Opção de Pagamento</Label>
-          <Select defaultValue="vista" onValueChange={onChange}>
-            <SelectTrigger className="w-full bg-[#F5F5F7] border-[#D1D1D1]">
-              <SelectValue placeholder="Selecione a forma de pagamento" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="vista">A vista em dinheiro, PIX ou cartão de débito</SelectItem>
-              <SelectItem value="credito1x">No cartão de crédito em 1 vez</SelectItem>
-              <SelectItem value="creditoparcelado">
-                No cartão de crédito de 2 a 10 parcelas com juros
-              </SelectItem>
-              <SelectItem value="boleto">No boleto bancário</SelectItem>
-              <SelectItem value="cheque">No cheque</SelectItem>
-              <SelectItem value="multiplas">Mais de uma opção</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Opção de Pagamento</Label>
+            <Select defaultValue="vista" onValueChange={handleTipoChange}>
+              <SelectTrigger className="w-full bg-[#F5F5F7] border-[#D1D1D1]">
+                <SelectValue placeholder="Selecione a forma de pagamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vista">A vista em dinheiro, PIX ou cartão de débito</SelectItem>
+                <SelectItem value="credito1x">No cartão de crédito em 1 vez</SelectItem>
+                <SelectItem value="creditoparcelado">
+                  No cartão de crédito de 2 a 10 parcelas com juros
+                </SelectItem>
+                <SelectItem value="boleto">No boleto bancário</SelectItem>
+                <SelectItem value="cheque">No cheque</SelectItem>
+                <SelectItem value="misto">Misto (Mais de uma opção)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {tipo === 'misto' && (
+            <div className="space-y-3 pt-4 mt-2 border-t border-[#D1D1D1] animate-in fade-in slide-in-from-top-2">
+              <Label>Pagamentos (Misto)</Label>
+              {mistos.map((misto, index) => (
+                <div
+                  key={index}
+                  className="flex flex-col sm:flex-row items-start sm:items-center gap-3"
+                >
+                  <div className="w-full sm:flex-1">
+                    <Select
+                      value={misto.forma}
+                      onValueChange={(val) => updateMisto(index, 'forma', val)}
+                    >
+                      <SelectTrigger className="bg-white border-[#D1D1D1]">
+                        <SelectValue placeholder="Forma" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                        <SelectItem value="pix">PIX</SelectItem>
+                        <SelectItem value="debito">Cartão de Débito</SelectItem>
+                        <SelectItem value="credito">Cartão de Crédito</SelectItem>
+                        <SelectItem value="boleto">Boleto</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-full sm:w-40 flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder="Valor (R$)"
+                      className="bg-white border-[#D1D1D1] flex-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      value={misto.valor || ''}
+                      onChange={(e) => updateMisto(index, 'valor', parseFloat(e.target.value) || 0)}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:bg-destructive/10 shrink-0"
+                      onClick={() => removeMisto(index)}
+                      disabled={mistos.length === 1}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 text-primary border-primary hover:bg-primary/10 w-full sm:w-auto"
+                onClick={addMisto}
+              >
+                <Plus className="w-4 h-4 mr-2" /> Adicionar Pagamento
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
