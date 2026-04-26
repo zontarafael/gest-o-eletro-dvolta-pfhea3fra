@@ -208,25 +208,55 @@ export async function printPedidoVenda(vendaId: string) {
         <table>
           <thead>
             <tr>
-              <th>VENCIMENTO</th>
-              <th>VALOR DA PARCELA</th>
-              <th>FORMA DE PAGAMENTO</th>
-              <th>OBSERVAÇÃO</th>
+              <th class="text-center" style="width: 15%;">VENCIMENTO</th>
+              <th class="text-right" style="width: 20%;">VALOR DA PARCELA</th>
+              <th style="width: 35%;">FORMA DE PAGAMENTO</th>
+              <th style="width: 30%;">OBSERVAÇÃO</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>${dataVenda}</td>
-              <td>${Number(venda.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-              <td>${venda.forma_pagamento || ''}</td>
-              <td></td>
-            </tr>
+            ${(() => {
+              try {
+                const parsed = JSON.parse(venda.forma_pagamento || '[]')
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  return parsed
+                    .map((pag: any) => {
+                      const metodo = pag.metodo || pag.forma || pag.tipo || 'Não informado'
+                      const parcelas = pag.parcelas || pag.quantidade_parcelas || 1
+                      const valor = pag.valor || 0
+                      const valorParcela = pag.valor_parcela || valor / parcelas
+                      const vencimento = pag.vencimento || pag.data_vencimento || dataVenda
+                      const obs = pag.observacao || ''
+
+                      return `
+                      <tr>
+                        <td class="text-center">${vencimento}</td>
+                        <td class="text-right">R$ ${Number(valorParcela).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td>${metodo} ${parcelas > 1 ? '(' + parcelas + 'x)' : ''}</td>
+                        <td>${obs}</td>
+                      </tr>
+                    `
+                    })
+                    .join('')
+                }
+              } catch (e) {
+                // Fallback para string simples ou estrutura não compatível
+              }
+              return `
+                <tr>
+                  <td class="text-center">${dataVenda}</td>
+                  <td class="text-right">R$ ${Number(venda.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td>${venda.forma_pagamento || 'Não informado'}</td>
+                  <td></td>
+                </tr>
+              `
+            })()}
           </tbody>
         </table>
         
         <div class="termo">
           <h3>TERMO DE CIÊNCIA E CONCORDÂNCIA<br/>PRODUTOS ELETRO DVOLTA – ECONOMIA CIRCULAR</h3>
-          <p><strong>declaro que:</strong></p>
+          <p>Eu, <strong>${cliente.nome || '_________________________'}</strong>, CPF ou CNPJ <strong>${cliente.documento || '_________________________'}</strong>, <strong>declaro que:</strong></p>
           <p>1. Estou adquirindo um produto oriundo da economia circular.</p>
           <p>2. Fui informado(a) de forma clara e adequada que o produto:</p>
           <ul>
