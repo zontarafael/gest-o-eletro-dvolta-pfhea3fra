@@ -149,48 +149,4 @@ export function EstoqueTable({ produtos, loading, isAdmin, handleStatusChange }:
                           'Devolução',
                           'Vendido',
                         ].map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {s}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className={`font-semibold ${getStatusColor(p.status || 'Em preparação')}`}
-                    >
-                      {p.status || 'Em preparação'}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handlePrintCabide(p)}
-                      title="Imprimir Cabide"
-                    >
-                      <Printer className="h-4 w-4 text-blue-600" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handlePrintDetalhes(p)}
-                      title="Imprimir Detalhes"
-                    >
-                      <FileText className="h-4 w-4 text-gray-600" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  )
-}
+    
