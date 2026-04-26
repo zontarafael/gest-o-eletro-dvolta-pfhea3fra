@@ -60,6 +60,7 @@ export default function NovaVenda() {
             qtd: i.quantidade,
             tipo: i.produtos?.categoria || 'Produto Novo',
             key: i.id || Date.now() + Math.random(),
+            estoque: (i.produtos?.quantidade || 0) + i.quantidade,
           }))
           setProdutos(mappedProdutos)
         }
@@ -141,6 +142,28 @@ export default function NovaVenda() {
         })
         return
       }
+    }
+
+    const outOfStock = produtos.find(
+      (p) => p.id !== 'N/A' && p.estoque !== undefined && p.qtd > p.estoque,
+    )
+    if (outOfStock) {
+      toast({
+        title: 'Estoque Insuficiente',
+        description: `O produto "${outOfStock.nome}" possui apenas ${outOfStock.estoque} unidade(s) em estoque.`,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const invalidQtd = produtos.find((p) => p.qtd <= 0)
+    if (invalidQtd) {
+      toast({
+        title: 'Quantidade Inválida',
+        description: `A quantidade do produto "${invalidQtd.nome}" deve ser maior que zero.`,
+        variant: 'destructive',
+      })
+      return
     }
 
     setLoading(true)

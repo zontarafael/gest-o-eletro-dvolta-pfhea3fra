@@ -71,13 +71,15 @@ export function ProdutosSection({
 
     let newP
     if (selectedProduct) {
+      const maxQtd = selectedProduct.quantidade || 0
       newP = {
         id: selectedProduct.id,
         nome: selectedProduct.nome,
         preco: Number(selectedProduct.preco_venda || selectedProduct.custo_unitario * 1.5 || 0),
-        qtd: 1,
+        qtd: maxQtd > 0 ? 1 : 0,
         tipo: tipoProduto,
         key: Date.now(),
+        estoque: maxQtd,
       }
     } else {
       newP = {
@@ -87,6 +89,7 @@ export function ProdutosSection({
         qtd: 1,
         tipo: tipoProduto,
         key: Date.now(),
+        estoque: 999999,
       }
     }
 
@@ -107,7 +110,13 @@ export function ProdutosSection({
   }
 
   const updateQtd = (key: number, qtd: number) => {
-    updateList(selectedProducts.map((p) => (p.key === key ? { ...p, qtd: Math.max(1, qtd) } : p)))
+    updateList(
+      selectedProducts.map((p) => {
+        if (p.key !== key) return p
+        const maxQtd = p.id !== 'N/A' && p.estoque !== undefined ? p.estoque : 999999
+        return { ...p, qtd: Math.min(Math.max(maxQtd > 0 ? 1 : 0, qtd), maxQtd) }
+      }),
+    )
   }
 
   const updatePreco = (key: number, preco: number) => {
@@ -234,7 +243,7 @@ export function ProdutosSection({
                 <TableRow className="border-[#D1D1D1]">
                   <TableHead className="font-semibold text-foreground">Produto</TableHead>
                   <TableHead className="font-semibold text-foreground">Natureza</TableHead>
-                  <TableHead className="w-24 font-semibold text-foreground">Qtd</TableHead>
+                  <TableHead className="w-32 font-semibold text-foreground">Qtd</TableHead>
                   <TableHead className="w-40 font-semibold text-foreground">
                     Preço Un. (R$)
                   </TableHead>
@@ -248,13 +257,21 @@ export function ProdutosSection({
                     <TableCell className="font-medium">{p.nome}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{p.tipo}</TableCell>
                     <TableCell>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={p.qtd}
-                        onChange={(e) => updateQtd(p.key, parseInt(e.target.value) || 1)}
-                        className="h-8 bg-[#F5F5F7] border-[#D1D1D1] px-2 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={p.estoque}
+                          value={p.qtd}
+                          onChange={(e) => updateQtd(p.key, parseInt(e.target.value) || 1)}
+                          className="h-8 w-16 bg-[#F5F5F7] border-[#D1D1D1] px-2 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        {p.id !== 'N/A' && p.estoque !== undefined && (
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            / {p.estoque}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Input
