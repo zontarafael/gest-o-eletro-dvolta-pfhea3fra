@@ -184,6 +184,7 @@ export default function NovoProduto() {
         freteTotal={freteTotal}
         totalOutrosCusto={totalCustoProdutos}
         produtoEditando={produtoEditando}
+        produtosAdicionados={produtos}
         onCancelEdit={() => setProdutoEditando(null)}
         onAdd={(p) => {
           if (produtoEditando) {

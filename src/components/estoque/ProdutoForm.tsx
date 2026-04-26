@@ -20,12 +20,14 @@ export function ProdutoForm({
   onAdd,
   produtoEditando,
   onCancelEdit,
+  produtosAdicionados = [],
 }: {
   freteTotal: number
   totalOutrosCusto: number
   onAdd: (p: any) => void
   produtoEditando?: any
   onCancelEdit?: () => void
+  produtosAdicionados?: any[]
 }) {
   const { toast } = useToast()
   const [busca, setBusca] = useState('')
@@ -76,6 +78,51 @@ export function ProdutoForm({
   const [isSearching, setIsSearching] = useState(false)
   const [showSugestoes, setShowSugestoes] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
+
+  const [baseNextCode, setBaseNextCode] = useState<number>(0)
+
+  useEffect(() => {
+    const fetchBaseCode = async () => {
+      const { data } = await supabase
+        .from('produtos')
+        .select('codigo')
+        .not('codigo', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(100)
+
+      let maxNum = 0
+      if (data) {
+        for (const p of data) {
+          if (p.codigo) {
+            const match = p.codigo.match(/\d+$/)
+            if (match) {
+              const num = parseInt(match[0], 10)
+              if (num > maxNum) maxNum = num
+            }
+          }
+        }
+      }
+      setBaseNextCode(maxNum)
+    }
+    fetchBaseCode()
+  }, [])
+
+  useEffect(() => {
+    if (!produtoEditando && !produtoEncontrado) {
+      let maxAdded = 0
+      for (const p of produtosAdicionados) {
+        if (p.codProduto) {
+          const match = String(p.codProduto).match(/\d+$/)
+          if (match) {
+            const num = parseInt(match[0], 10)
+            if (num > maxAdded) maxAdded = num
+          }
+        }
+      }
+      const nextNum = Math.max(baseNextCode, maxAdded) + 1
+      setForm((prev: any) => ({ ...prev, codProduto: String(nextNum).padStart(4, '0') }))
+    }
+  }, [baseNextCode, produtosAdicionados, produtoEditando, produtoEncontrado])
 
   useEffect(() => {
     if (produtoEditando) {
@@ -435,9 +482,10 @@ export function ProdutoForm({
                 <div className="space-y-1">
                   <Label>Cód. Produto</Label>
                   <Input
-                    className="bg-[#F5F5F7] border-[#D1D1D1]"
+                    className="bg-[#E5E5E5] border-[#D1D1D1] text-muted-foreground font-semibold"
                     value={form.codProduto}
-                    onChange={(e) => setForm({ ...form, codProduto: e.target.value })}
+                    readOnly
+                    title="Código gerado automaticamente"
                   />
                 </div>
                 <div className="space-y-1">
