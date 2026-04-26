@@ -38,17 +38,54 @@ export function ProdutosList({
                 <TableHead>Produto</TableHead>
                 <TableHead>Qtd.</TableHead>
                 <TableHead>Custo Unit.</TableHead>
-                <TableHead>Frete Unit.</TableHead>
-                <TableHead>Subtotal</TableHead>
+                <TableHead>Custos Totais</TableHead>
+                <TableHead>Custo Total Prod.</TableHead>
+                <TableHead>Total Multiplicado</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {produtos.map((p) => {
-                const custoTotalItem = p.quantidade * p.custoUnitario
-                const proporcao = totalCusto > 0 ? custoTotalItem / totalCusto : 0
+                const custoUnitario = Number(p.custoUnitario) || 0
+                const custoTotalItemBase = p.quantidade * custoUnitario
+                const proporcao = totalCusto > 0 ? custoTotalItemBase / totalCusto : 0
                 const freteUnitario = p.quantidade > 0 ? (freteTotal * proporcao) / p.quantidade : 0
-                const subtotal = custoTotalItem + freteUnitario * p.quantidade
+
+                let despesas = 0
+                if (Array.isArray(p.despesas_detalhadas)) {
+                  despesas = p.despesas_detalhadas.reduce(
+                    (acc: number, d: any) => acc + (Number(d.valor) || 0),
+                    0,
+                  )
+                } else if (Array.isArray(p.despesas)) {
+                  despesas = p.despesas.reduce(
+                    (acc: number, d: any) => acc + (Number(d.valor) || 0),
+                    0,
+                  )
+                } else {
+                  despesas = Number(p.despesasAdicionais || p.despesas_adicionais || 0)
+                }
+
+                let impostos = 0
+                if (Array.isArray(p.impostos_detalhados)) {
+                  impostos = p.impostos_detalhados.reduce(
+                    (acc: number, i: any) => acc + (custoUnitario * (Number(i.valor) || 0)) / 100,
+                    0,
+                  )
+                } else if (Array.isArray(p.impostos)) {
+                  impostos = p.impostos.reduce(
+                    (acc: number, i: any) => acc + (custoUnitario * (Number(i.valor) || 0)) / 100,
+                    0,
+                  )
+                } else {
+                  impostos =
+                    (custoUnitario * (Number(p.imposto1) || 0)) / 100 +
+                    (custoUnitario * (Number(p.imposto2) || 0)) / 100
+                }
+
+                const custosTotais = freteUnitario + despesas + impostos
+                const custoTotalProduto = custoUnitario + custosTotais
+                const totalMultiplicado = custoTotalProduto * p.quantidade
 
                 return (
                   <TableRow key={p.id}>
@@ -59,9 +96,12 @@ export function ProdutosList({
                       )}
                     </TableCell>
                     <TableCell>{p.quantidade}</TableCell>
-                    <TableCell>R$ {p.custoUnitario.toFixed(2)}</TableCell>
-                    <TableCell>R$ {freteUnitario.toFixed(2)}</TableCell>
-                    <TableCell>R$ {subtotal.toFixed(2)}</TableCell>
+                    <TableCell>R$ {custoUnitario.toFixed(2)}</TableCell>
+                    <TableCell>R$ {custosTotais.toFixed(2)}</TableCell>
+                    <TableCell>R$ {custoTotalProduto.toFixed(2)}</TableCell>
+                    <TableCell className="font-semibold">
+                      R$ {totalMultiplicado.toFixed(2)}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         {onEdit && (
