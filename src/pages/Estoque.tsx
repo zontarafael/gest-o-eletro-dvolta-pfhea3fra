@@ -23,6 +23,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 
 export default function Estoque() {
   const [produtos, setProdutos] = useState<any[]>([])
@@ -30,6 +40,36 @@ export default function Estoque() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [isAdmin, setIsAdmin] = useState(false)
+
+  const availableFields = [
+    { id: 'codigo', label: 'Código do Produto' },
+    { id: 'nome', label: 'Nome do Produto' },
+    { id: 'categoria', label: 'Categoria' },
+    { id: 'marca', label: 'Marca' },
+    { id: 'quantidade', label: 'Quantidade em Estoque' },
+    { id: 'custo_unitario', label: 'Custo Unitário' },
+    { id: 'custos_totais', label: 'Custos Adicionais Totais' },
+    { id: 'custo_final', label: 'Custo Final do Produto' },
+    { id: 'preco_venda', label: 'Valor de Venda' },
+    { id: 'lucro_bruto', label: 'Lucro Bruto' },
+    { id: 'margem_lucro', label: 'Margem de Lucro' },
+    { id: 'fornecedor', label: 'Fornecedor' },
+    { id: 'lote', label: 'Lote / Nota Fiscal' },
+    { id: 'status', label: 'Status' },
+  ]
+  const [selectedFields, setSelectedFields] = useState<string[]>([
+    'codigo',
+    'nome',
+    'quantidade',
+    'custo_final',
+    'preco_venda',
+    'status',
+  ])
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+
+  const toggleField = (id: string) => {
+    setSelectedFields((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]))
+  }
 
   useEffect(() => {
     if (user) {
@@ -48,7 +88,7 @@ export default function Estoque() {
     const fetchProdutos = async () => {
       const { data } = await supabase
         .from('produtos')
-        .select('*')
+        .select('*, fornecedores(nome)')
         .order('created_at', { ascending: false })
 
       if (data) setProdutos(data)
@@ -71,6 +111,216 @@ export default function Estoque() {
         description: 'Não foi possível atualizar o status.',
         variant: 'destructive',
       })
+    }
+  }
+
+  const handleGenerateReport = (format: 'pdf' | 'xls') => {
+    if (produtos.length === 0) {
+      return toast({ title: 'Aviso', description: 'Nenhum produto para exportar.' })
+    }
+    if (selectedFields.length === 0) {
+      return toast({
+        title: 'Aviso',
+        description: 'Selecione pelo menos um campo para o relatório.',
+        variant: 'destructive',
+      })
+    }
+
+    if (format === 'xls') {
+      const headers = availableFields
+        .filter((f) => selectedFields.includes(f.id))
+        .map((f) => f.label)
+      const rows = produtos.map((p) => {
+        const rowData: any[] = []
+
+        const despesas = Number(p.despesas_adicionais || 0)
+        const impostos = p.custo_unitario
+          ? (p.custo_unitario * (Number(p.imposto1 || 0) + Number(p.imposto2 || 0))) / 100
+          : 0
+        const frete = Number(p.valor_frete_unitario || 0)
+        const custosTotais = despesas + impostos + frete
+
+        const lucroBruto = (p.preco_venda || 0) - (p.custo_final || 0)
+        const margemLucro = p.preco_venda > 0 ? (lucroBruto / p.preco_venda) * 100 : 0
+
+        availableFields.forEach((f) => {
+          if (selectedFields.includes(f.id)) {
+            switch (f.id) {
+              case 'codigo':
+                rowData.push(p.codigo || '')
+                break
+              case 'nome':
+                rowData.push(p.nome || '')
+                break
+              case 'categoria':
+                rowData.push(p.categoria || '')
+                break
+              case 'marca':
+                rowData.push(p.marca || '')
+                break
+              case 'quantidade':
+                rowData.push(p.quantidade || 0)
+                break
+              case 'custo_unitario':
+                rowData.push(p.custo_unitario || 0)
+                break
+              case 'custos_totais':
+                rowData.push(custosTotais.toFixed(2))
+                break
+              case 'custo_final':
+                rowData.push(p.custo_final || 0)
+                break
+              case 'preco_venda':
+                rowData.push(p.preco_venda || 0)
+                break
+              case 'lucro_bruto':
+                rowData.push(lucroBruto.toFixed(2))
+                break
+              case 'margem_lucro':
+                rowData.push(margemLucro.toFixed(2) + '%')
+                break
+              case 'fornecedor':
+                rowData.push(p.fornecedores?.nome || '')
+                break
+              case 'lote':
+                rowData.push(p.lote || '')
+                break
+              case 'status':
+                rowData.push(p.status || '')
+                break
+            }
+          }
+        })
+
+        return rowData.map((d) => `"${String(d).replace(/"/g, '""')}"`).join(',')
+      })
+
+      const csvContent = [headers.map((h) => `"${h}"`).join(','), ...rows].join('\n')
+      const blob = new Blob([new Uint8Array([0xef, 0xbb, 0xbf]), csvContent], {
+        type: 'text/csv;charset=utf-8;',
+      })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.setAttribute('href', url)
+      link.setAttribute('download', 'relatorio_estoque.csv')
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      toast({ title: 'Sucesso', description: 'Relatório XLS gerado com sucesso!' })
+      setIsReportModalOpen(false)
+    } else if (format === 'pdf') {
+      toast({ title: 'Gerando PDF', description: 'Preparando impressão do relatório...' })
+
+      const printWindow = window.open('', '', 'width=800,height=600')
+      if (printWindow) {
+        const headers = availableFields
+          .filter((f) => selectedFields.includes(f.id))
+          .map((f) => f.label)
+
+        let html = `
+          <html>
+            <head>
+              <title>Relatório de Estoque</title>
+              <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                h1 { text-align: center; color: #333; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f5f5f7; }
+                @media print {
+                  @page { margin: 1cm; size: landscape; }
+                }
+              </style>
+            </head>
+            <body>
+              <h1>Relatório de Estoque</h1>
+              <table>
+                <thead>
+                  <tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr>
+                </thead>
+                <tbody>
+        `
+
+        produtos.forEach((p) => {
+          html += '<tr>'
+          const despesas = Number(p.despesas_adicionais || 0)
+          const impostos = p.custo_unitario
+            ? (p.custo_unitario * (Number(p.imposto1 || 0) + Number(p.imposto2 || 0))) / 100
+            : 0
+          const frete = Number(p.valor_frete_unitario || 0)
+          const custosTotais = despesas + impostos + frete
+
+          const lucroBruto = (p.preco_venda || 0) - (p.custo_final || 0)
+          const margemLucro = p.preco_venda > 0 ? (lucroBruto / p.preco_venda) * 100 : 0
+
+          availableFields.forEach((f) => {
+            if (selectedFields.includes(f.id)) {
+              switch (f.id) {
+                case 'codigo':
+                  html += `<td>${p.codigo || ''}</td>`
+                  break
+                case 'nome':
+                  html += `<td>${p.nome || ''}</td>`
+                  break
+                case 'categoria':
+                  html += `<td>${p.categoria || ''}</td>`
+                  break
+                case 'marca':
+                  html += `<td>${p.marca || ''}</td>`
+                  break
+                case 'quantidade':
+                  html += `<td>${p.quantidade || 0}</td>`
+                  break
+                case 'custo_unitario':
+                  html += `<td>R$ ${(p.custo_unitario || 0).toFixed(2)}</td>`
+                  break
+                case 'custos_totais':
+                  html += `<td>R$ ${custosTotais.toFixed(2)}</td>`
+                  break
+                case 'custo_final':
+                  html += `<td>R$ ${(p.custo_final || 0).toFixed(2)}</td>`
+                  break
+                case 'preco_venda':
+                  html += `<td>R$ ${(p.preco_venda || 0).toFixed(2)}</td>`
+                  break
+                case 'lucro_bruto':
+                  html += `<td>R$ ${lucroBruto.toFixed(2)}</td>`
+                  break
+                case 'margem_lucro':
+                  html += `<td>${margemLucro.toFixed(2)}%</td>`
+                  break
+                case 'fornecedor':
+                  html += `<td>${p.fornecedores?.nome || ''}</td>`
+                  break
+                case 'lote':
+                  html += `<td>${p.lote || ''}</td>`
+                  break
+                case 'status':
+                  html += `<td>${p.status || ''}</td>`
+                  break
+              }
+            }
+          })
+          html += '</tr>'
+        })
+
+        html += `
+                </tbody>
+              </table>
+              <script>
+                window.onload = () => {
+                  window.print();
+                  setTimeout(() => window.close(), 500);
+                }
+              </script>
+            </body>
+          </html>
+        `
+        printWindow.document.write(html)
+        printWindow.document.close()
+      }
+      setIsReportModalOpen(false)
     }
   }
 
@@ -105,9 +355,77 @@ export default function Estoque() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="shadow-sm bg-white border-[#D1D1D1] gap-2">
-            <PackageSearch className="w-4 h-4" /> Relatório
-          </Button>
+          <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="shadow-sm bg-white border-[#D1D1D1] gap-2">
+                <PackageSearch className="w-4 h-4" /> Relatório
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[700px] bg-white">
+              <DialogHeader>
+                <DialogTitle>Gerador de Relatórios</DialogTitle>
+                <DialogDescription>
+                  Selecione as informações que deseja incluir no seu relatório de estoque.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                {availableFields.map((field) => (
+                  <div key={field.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`field-${field.id}`}
+                      checked={selectedFields.includes(field.id)}
+                      onCheckedChange={() => toggleField(field.id)}
+                    />
+                    <label
+                      htmlFor={`field-${field.id}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {field.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+
+              <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+                <div className="flex flex-1 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 border-[#D1D1D1]"
+                    onClick={() => setSelectedFields(availableFields.map((f) => f.id))}
+                  >
+                    Marcar Todos
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 border-[#D1D1D1]"
+                    onClick={() => setSelectedFields([])}
+                  >
+                    Limpar
+                  </Button>
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button
+                    type="button"
+                    onClick={() => handleGenerateReport('pdf')}
+                    className="flex-1 sm:flex-none bg-[#3B82F6] hover:bg-[#2563EB] text-white border-0 shadow-sm"
+                  >
+                    Gerar PDF
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => handleGenerateReport('xls')}
+                    className="flex-1 sm:flex-none bg-[#10B981] hover:bg-[#059669] text-white border-0 shadow-sm"
+                  >
+                    Gerar XLS
+                  </Button>
+                </div>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <Button asChild className="shadow-subtle gap-2">
             <Link to="/estoque/novo">
               <Plus className="w-4 h-4" /> Novo Produto
