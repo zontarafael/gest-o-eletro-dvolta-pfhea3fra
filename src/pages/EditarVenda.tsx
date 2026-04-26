@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, Printer } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { printPedidoVenda } from '@/lib/print-venda'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -76,12 +77,19 @@ export default function EditarVenda() {
             <ArrowLeft className="w-4 h-4" />
           </Link>
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
             Editar Pedido {venda.codigo}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Atualize as informações do pedido.</p>
         </div>
+        <Button
+          variant="outline"
+          onClick={() => printPedidoVenda(venda.id)}
+          className="shadow-subtle gap-2 bg-white"
+        >
+          <Printer className="w-4 h-4" /> Imprimir Pedido
+        </Button>
       </div>
 
       <Card className="border-[#D1D1D1] shadow-subtle bg-white">

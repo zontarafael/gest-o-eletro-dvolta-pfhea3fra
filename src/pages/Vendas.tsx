@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
+import { printPedidoVenda } from '@/lib/print-venda'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -329,7 +330,7 @@ export default function Vendas() {
                             variant="ghost"
                             size="icon"
                             title="Imprimir Pedido de Venda"
-                            onClick={() => window.print()}
+                            onClick={() => printPedidoVenda(p.id)}
                           >
                             <Printer className="w-4 h-4 text-muted-foreground hover:text-primary" />
                           </Button>
