@@ -9,7 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { ShoppingBag, TrendingUp, Percent, Plus, FileText, Download } from 'lucide-react'
+import { ShoppingBag, TrendingUp, Percent, Plus, FileText, Download, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
@@ -139,25 +139,33 @@ export default function Vendas() {
                   <TableHead className="font-semibold">Valor</TableHead>
                   <TableHead className="font-semibold">Data</TableHead>
                   <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold text-right">Impressões</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Carregando pedidos...
                     </TableCell>
                   </TableRow>
                 ) : pedidos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Nenhum pedido registrado.
                     </TableCell>
                   </TableRow>
                 ) : (
                   pedidos.map((p) => (
                     <TableRow key={p.id} className="border-[#D1D1D1] hover:bg-[#F5F5F7]/50">
-                      <TableCell className="font-medium">{p.codigo}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link
+                          to={`/vendas/${p.id}`}
+                          className="text-primary hover:underline font-bold"
+                        >
+                          {p.codigo}
+                        </Link>
+                      </TableCell>
                       <TableCell>{p.clientes?.nome || 'Cliente Desconhecido'}</TableCell>
                       <TableCell className="font-semibold">
                         R${' '}
@@ -181,6 +189,26 @@ export default function Vendas() {
                         >
                           {p.status}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Imprimir Pedido de Venda"
+                            onClick={() => window.print()}
+                          >
+                            <Printer className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Imprimir Nota Fiscal"
+                            onClick={() => window.print()}
+                          >
+                            <FileText className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

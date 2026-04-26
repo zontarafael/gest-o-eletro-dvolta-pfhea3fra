@@ -116,7 +116,21 @@ export default function NovaVenda() {
       if (newC) clienteId = newC.id
     }
 
-    const codigo = `PED-${Math.floor(1000 + Math.random() * 9000)}`
+    const { data: lastVenda } = await supabase
+      .from('vendas')
+      .select('codigo')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    let nextNum = 1
+    if (lastVenda?.codigo) {
+      const match = lastVenda.codigo.match(/PED-(\d+)/)
+      if (match) {
+        nextNum = parseInt(match[1], 10) + 1
+      }
+    }
+    const codigo = `PED-${nextNum.toString().padStart(4, '0')}`
 
     const { data: venda } = await supabase
       .from('vendas')

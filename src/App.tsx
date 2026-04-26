@@ -11,6 +11,7 @@ import Empresa from './pages/Empresa'
 import Clientes from './pages/Clientes'
 import Vendas from './pages/Vendas'
 import NovaVenda from './pages/NovaVenda'
+import EditarVenda from './pages/EditarVenda'
 import CRM from './pages/CRM'
 import Estoque from './pages/Estoque'
 import NovoProduto from './pages/NovoProduto'
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/vendas" element={<Vendas />} />
             <Route path="/vendas/nova" element={<NovaVenda />} />
+            <Route path="/vendas/:id" element={<EditarVenda />} />
             <Route path="/crm" element={<CRM />} />
             <Route path="/estoque" element={<Estoque />} />
             <Route path="/estoque/novo" element={<NovoProduto />} />
