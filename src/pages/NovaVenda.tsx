@@ -77,6 +77,19 @@ export default function NovaVenda() {
         })
         return
       }
+
+      const hasInvalidCredito = pagamentosMistos.some(
+        (pm) => pm.forma === 'credito' && (!pm.parcelas || pm.parcelas < 1),
+      )
+      if (hasInvalidCredito) {
+        toast({
+          title: 'Atenção',
+          description:
+            'Informe uma quantidade válida de parcelas para os pagamentos em cartão de crédito (Misto).',
+          variant: 'destructive',
+        })
+        return
+      }
     }
 
     setLoading(true)
@@ -135,13 +148,32 @@ export default function NovaVenda() {
       }
 
       if (pagamento === 'misto' && pagamentosMistos.length > 0) {
-        const movimentacoes = pagamentosMistos.map((pm) => ({
-          user_id: user.id,
-          descricao: `Venda ${codigo} - ${cliente.nome} (${pm.forma})`,
-          tipo: 'Receita',
-          valor: pm.valor,
-          status: 'Liquidado',
-        }))
+        const movimentacoes: any[] = []
+        pagamentosMistos.forEach((pm) => {
+          if (pm.forma === 'credito' && pm.parcelas && pm.parcelas > 0) {
+            const valorParcela = pm.valor / pm.parcelas
+            for (let i = 1; i <= pm.parcelas; i++) {
+              const dataVencimento = new Date()
+              dataVencimento.setDate(dataVencimento.getDate() + i * 30)
+              movimentacoes.push({
+                user_id: user.id,
+                descricao: `Venda ${codigo} - ${cliente.nome} (${pm.forma} - Parcela ${i}/${pm.parcelas})`,
+                tipo: 'Receita',
+                valor: valorParcela,
+                status: 'Pendente',
+                data_movimentacao: dataVencimento.toISOString(),
+              })
+            }
+          } else {
+            movimentacoes.push({
+              user_id: user.id,
+              descricao: `Venda ${codigo} - ${cliente.nome} (${pm.forma})`,
+              tipo: 'Receita',
+              valor: pm.valor,
+              status: 'Liquidado',
+            })
+          }
+        })
         await supabase.from('movimentacoes_financeiras').insert(movimentacoes)
       } else if (pagamento === 'credito') {
         const movimentacoes = []

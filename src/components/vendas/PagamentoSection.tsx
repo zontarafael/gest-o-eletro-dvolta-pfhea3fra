@@ -15,6 +15,7 @@ import { CreditCard, Plus, Trash2 } from 'lucide-react'
 export interface PagamentoMisto {
   forma: string
   valor: number
+  parcelas?: number
 }
 
 interface PagamentoSectionProps {
@@ -146,43 +147,103 @@ export function PagamentoSection({
               {mistos.map((misto, index) => (
                 <div
                   key={index}
-                  className="flex flex-col sm:flex-row items-start sm:items-center gap-3"
+                  className="p-3 bg-white border border-[#D1D1D1] rounded-md space-y-3"
                 >
-                  <div className="w-full sm:flex-1">
-                    <Select
-                      value={misto.forma}
-                      onValueChange={(val) => updateMisto(index, 'forma', val)}
-                    >
-                      <SelectTrigger className="bg-white border-[#D1D1D1]">
-                        <SelectValue placeholder="Forma" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                        <SelectItem value="pix">PIX</SelectItem>
-                        <SelectItem value="debito">Cartão de Débito</SelectItem>
-                        <SelectItem value="credito">Cartão de Crédito</SelectItem>
-                        <SelectItem value="boleto">Boleto</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div className="w-full sm:flex-1">
+                      <Select
+                        value={misto.forma}
+                        onValueChange={(val) => updateMisto(index, 'forma', val)}
+                      >
+                        <SelectTrigger className="bg-white border-[#D1D1D1]">
+                          <SelectValue placeholder="Forma" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                          <SelectItem value="pix">PIX</SelectItem>
+                          <SelectItem value="debito">Cartão de Débito</SelectItem>
+                          <SelectItem value="credito">Cartão de Crédito</SelectItem>
+                          <SelectItem value="boleto">Boleto</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-full sm:w-40 flex items-center gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Valor (R$)"
+                        className="bg-white border-[#D1D1D1] flex-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={misto.valor || ''}
+                        onChange={(e) =>
+                          updateMisto(index, 'valor', parseFloat(e.target.value) || 0)
+                        }
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:bg-destructive/10 shrink-0"
+                        onClick={() => removeMisto(index)}
+                        disabled={mistos.length === 1}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="w-full sm:w-40 flex items-center gap-2">
-                    <Input
-                      type="number"
-                      placeholder="Valor (R$)"
-                      className="bg-white border-[#D1D1D1] flex-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      value={misto.valor || ''}
-                      onChange={(e) => updateMisto(index, 'valor', parseFloat(e.target.value) || 0)}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:bg-destructive/10 shrink-0"
-                      onClick={() => removeMisto(index)}
-                      disabled={mistos.length === 1}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+
+                  {misto.forma === 'credito' && misto.valor > 0 && (
+                    <div className="space-y-3 pt-2 border-t border-[#D1D1D1] animate-in fade-in slide-in-from-top-2">
+                      <Label>Quantidade de Parcelas</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={120}
+                        value={misto.parcelas || ''}
+                        onChange={(e) => {
+                          const parsed = parseInt(e.target.value, 10)
+                          updateMisto(index, 'parcelas', isNaN(parsed) ? 0 : parsed)
+                        }}
+                        className="bg-white border-[#D1D1D1] w-full sm:w-48"
+                        placeholder="Ex: 3"
+                      />
+                      {(() => {
+                        const p = Number(misto.parcelas)
+                        if (isNaN(p) || p <= 0) return null
+                        const valorParcela = misto.valor / p
+                        const items = []
+                        for (let i = 1; i <= p; i++) {
+                          const dataVencimento = new Date()
+                          dataVencimento.setDate(dataVencimento.getDate() + i * 30)
+                          items.push(
+                            <div
+                              key={i}
+                              className="flex justify-between items-center py-1.5 border-b border-[#D1D1D1] last:border-0 text-sm"
+                            >
+                              <span className="text-muted-foreground">
+                                Parcela {i}/{p}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {dataVencimento.toLocaleDateString('pt-BR')}
+                              </span>
+                              <span className="font-medium text-foreground">
+                                R${' '}
+                                {valorParcela.toLocaleString('pt-BR', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </span>
+                            </div>,
+                          )
+                        }
+                        return (
+                          <div className="mt-3 p-3 bg-[#F5F5F7] rounded-md border border-[#D1D1D1]">
+                            <h4 className="text-sm font-semibold mb-2">
+                              Detalhamento das Parcelas
+                            </h4>
+                            <div className="max-h-40 overflow-y-auto pr-2">{items}</div>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  )}
                 </div>
               ))}
               <Button
