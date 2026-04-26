@@ -142,30 +142,39 @@ export default function Estoque() {
     const totals: Record<string, number> = {}
     summableFields.forEach((f) => (totals[f] = 0))
 
+    const processedData = produtos.map((p) => {
+      const despesas = Number(p.despesas_adicionais || 0)
+      const impostos = p.custo_unitario
+        ? (p.custo_unitario * (Number(p.imposto1 || 0) + Number(p.imposto2 || 0))) / 100
+        : 0
+      const frete = Number(p.valor_frete_unitario || 0)
+      const custosTotais = despesas + impostos + frete
+
+      const lucroBruto = (p.preco_venda || 0) - (p.custo_final || 0)
+      const margemLucro = p.preco_venda > 0 ? (lucroBruto / p.preco_venda) * 100 : 0
+
+      totals['quantidade'] += Number(p.quantidade) || 0
+      totals['custo_unitario'] += Number(p.custo_unitario) || 0
+      totals['custos_totais'] += custosTotais
+      totals['custo_final'] += Number(p.custo_final) || 0
+      totals['preco_venda'] += Number(p.preco_venda) || 0
+      totals['lucro_bruto'] += lucroBruto
+      totals['valor_site'] += Number(p.valor_site) || 0
+
+      return {
+        ...p,
+        custosTotais,
+        lucroBruto,
+        margemLucro,
+      }
+    })
+
     if (format === 'xls') {
       const headers = availableFields
         .filter((f) => selectedFields.includes(f.id))
         .map((f) => f.label)
-      const rows = produtos.map((p) => {
+      const rows = processedData.map((p) => {
         const rowData: any[] = []
-
-        const despesas = Number(p.despesas_adicionais || 0)
-        const impostos = p.custo_unitario
-          ? (p.custo_unitario * (Number(p.imposto1 || 0) + Number(p.imposto2 || 0))) / 100
-          : 0
-        const frete = Number(p.valor_frete_unitario || 0)
-        const custosTotais = despesas + impostos + frete
-
-        const lucroBruto = (p.preco_venda || 0) - (p.custo_final || 0)
-        const margemLucro = p.preco_venda > 0 ? (lucroBruto / p.preco_venda) * 100 : 0
-
-        totals['quantidade'] += p.quantidade || 0
-        totals['custo_unitario'] += p.custo_unitario || 0
-        totals['custos_totais'] += custosTotais
-        totals['custo_final'] += p.custo_final || 0
-        totals['preco_venda'] += p.preco_venda || 0
-        totals['lucro_bruto'] += lucroBruto
-        totals['valor_site'] += p.valor_site || 0
 
         availableFields.forEach((f) => {
           if (selectedFields.includes(f.id)) {
@@ -198,7 +207,7 @@ export default function Estoque() {
                 rowData.push(p.custo_unitario || 0)
                 break
               case 'custos_totais':
-                rowData.push(custosTotais.toFixed(2))
+                rowData.push(p.custosTotais.toFixed(2))
                 break
               case 'custo_final':
                 rowData.push(p.custo_final || 0)
@@ -210,10 +219,10 @@ export default function Estoque() {
                 rowData.push(p.preco_venda || 0)
                 break
               case 'lucro_bruto':
-                rowData.push(lucroBruto.toFixed(2))
+                rowData.push(p.lucroBruto.toFixed(2))
                 break
               case 'margem_lucro':
-                rowData.push(margemLucro.toFixed(2) + '%')
+                rowData.push(p.margemLucro.toFixed(2) + '%')
                 break
               case 'fornecedor':
                 rowData.push(p.fornecedores?.nome || '')
@@ -296,17 +305,8 @@ export default function Estoque() {
                 <tbody>
         `
 
-        produtos.forEach((p) => {
+        processedData.forEach((p) => {
           html += '<tr>'
-          const despesas = Number(p.despesas_adicionais || 0)
-          const impostos = p.custo_unitario
-            ? (p.custo_unitario * (Number(p.imposto1 || 0) + Number(p.imposto2 || 0))) / 100
-            : 0
-          const frete = Number(p.valor_frete_unitario || 0)
-          const custosTotais = despesas + impostos + frete
-
-          const lucroBruto = (p.preco_venda || 0) - (p.custo_final || 0)
-          const margemLucro = p.preco_venda > 0 ? (lucroBruto / p.preco_venda) * 100 : 0
 
           availableFields.forEach((f) => {
             if (selectedFields.includes(f.id)) {
@@ -339,7 +339,7 @@ export default function Estoque() {
                   html += `<td>R$ ${(p.custo_unitario || 0).toFixed(2)}</td>`
                   break
                 case 'custos_totais':
-                  html += `<td>R$ ${custosTotais.toFixed(2)}</td>`
+                  html += `<td>R$ ${p.custosTotais.toFixed(2)}</td>`
                   break
                 case 'custo_final':
                   html += `<td>R$ ${(p.custo_final || 0).toFixed(2)}</td>`
@@ -351,10 +351,10 @@ export default function Estoque() {
                   html += `<td>R$ ${(p.preco_venda || 0).toFixed(2)}</td>`
                   break
                 case 'lucro_bruto':
-                  html += `<td>R$ ${lucroBruto.toFixed(2)}</td>`
+                  html += `<td>R$ ${p.lucroBruto.toFixed(2)}</td>`
                   break
                 case 'margem_lucro':
-                  html += `<td>${margemLucro.toFixed(2)}%</td>`
+                  html += `<td>${p.margemLucro.toFixed(2)}%</td>`
                   break
                 case 'fornecedor':
                   html += `<td>${p.fornecedores?.nome || ''}</td>`
