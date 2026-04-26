@@ -236,4 +236,18 @@
     animation: fade-out-up 0.6s ease-out;
   }
   .animate-fade-out-down {
-    animation: fade-out-down 0.6s ease
+    animation: fade-out-down 0.6s ease-out;
+  }
+  .animate-slide-up {
+    animation: slide-up 0.6s ease-out;
+  }
+  .animate-slide-down {
+    animation: slide-down 0.6s ease-out;
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  .animate-spotlight {
+    animation: spotlight 2s ease forwards;
+  }
+}
