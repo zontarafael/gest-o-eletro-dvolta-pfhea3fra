@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, PackageSearch } from 'lucide-react'
+import { Plus, PackageSearch, Search } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { Input } from '@/components/ui/input'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -16,6 +17,7 @@ export default function Estoque() {
   const { toast } = useToast()
   const [isAdmin, setIsAdmin] = useState(false)
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     if (user) {
@@ -85,12 +87,27 @@ export default function Estoque() {
       </div>
 
       <Card className="border-[#D1D1D1] shadow-subtle bg-white">
-        <CardHeader>
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle>Catálogo Atual</CardTitle>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Buscar por produto, código ou categoria..."
+              className="pl-9 bg-gray-50/50 focus-visible:bg-white"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <EstoqueTable
-            produtos={produtos}
+            produtos={produtos.filter(
+              (p) =>
+                p.nome?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.codigo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.categoria?.toLowerCase().includes(searchQuery.toLowerCase()),
+            )}
             loading={loading}
             isAdmin={isAdmin}
             handleStatusChange={handleStatusChange}
