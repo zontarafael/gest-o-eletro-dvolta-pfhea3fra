@@ -29,7 +29,7 @@ export default function NovaVenda() {
   const [loading, setLoading] = useState(false)
   const [parcelas, setParcelas] = useState(1)
 
-  const total = produtos.reduce((acc, p) => acc + p.preco * p.qtd, 0)
+  const total = produtos.reduce((acc, p) => acc + (Number(p.preco) || 0) * (Number(p.qtd) || 0), 0)
 
   useEffect(() => {
     if (!editId) return
@@ -145,7 +145,7 @@ export default function NovaVenda() {
     }
 
     const outOfStock = produtos.find(
-      (p) => p.id !== 'N/A' && p.estoque !== undefined && p.qtd > p.estoque,
+      (p) => p.id !== 'N/A' && p.estoque !== undefined && Number(p.qtd) > p.estoque,
     )
     if (outOfStock) {
       toast({
@@ -156,11 +156,11 @@ export default function NovaVenda() {
       return
     }
 
-    const invalidQtd = produtos.find((p) => p.qtd <= 0)
+    const invalidQtd = produtos.find((p) => !p.qtd || Number(p.qtd) <= 0)
     if (invalidQtd) {
       toast({
         title: 'Quantidade Inválida',
-        description: `A quantidade do produto "${invalidQtd.nome}" deve ser maior que zero.`,
+        description: `A quantidade do produto "${invalidQtd?.nome || 'desconhecido'}" deve ser maior que zero.`,
         variant: 'destructive',
       })
       return
@@ -259,9 +259,9 @@ export default function NovaVenda() {
         .map((p) => ({
           venda_id: vendaId,
           produto_id: p.id !== 'N/A' ? p.id : null,
-          quantidade: p.qtd,
-          preco_unitario: p.preco,
-          subtotal: p.preco * p.qtd,
+          quantidade: Number(p.qtd) || 1,
+          preco_unitario: Number(p.preco) || 0,
+          subtotal: (Number(p.preco) || 0) * (Number(p.qtd) || 1),
         }))
         .filter((i) => i.produto_id)
 

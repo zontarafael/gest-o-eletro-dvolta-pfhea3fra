@@ -109,23 +109,36 @@ export function ProdutosSection({
     updateList(selectedProducts.filter((p) => p.key !== key))
   }
 
-  const updateQtd = (key: number, qtd: number) => {
+  const updateQtd = (key: number, val: string) => {
     updateList(
       selectedProducts.map((p) => {
         if (p.key !== key) return p
         const maxQtd = p.id !== 'N/A' && p.estoque !== undefined ? p.estoque : 999999
-        return { ...p, qtd: Math.min(Math.max(maxQtd > 0 ? 1 : 0, qtd), maxQtd) }
+        if (val === '') return { ...p, qtd: '' }
+        let parsed = parseInt(val, 10)
+        if (isNaN(parsed)) return { ...p, qtd: '' }
+        return { ...p, qtd: Math.min(Math.max(0, parsed), maxQtd) }
       }),
     )
   }
 
-  const updatePreco = (key: number, preco: number) => {
+  const updatePreco = (key: number, val: string) => {
     updateList(
-      selectedProducts.map((p) => (p.key === key ? { ...p, preco: Math.max(0, preco) } : p)),
+      selectedProducts.map((p) => {
+        if (p.key === key) {
+          if (val === '') return { ...p, preco: '' }
+          const parsed = parseFloat(val)
+          return { ...p, preco: isNaN(parsed) ? '' : Math.max(0, parsed) }
+        }
+        return p
+      }),
     )
   }
 
-  const total = selectedProducts.reduce((acc, p) => acc + p.preco * p.qtd, 0)
+  const total = selectedProducts.reduce(
+    (acc, p) => acc + (Number(p.preco) || 0) * (Number(p.qtd) || 0),
+    0,
+  )
 
   return (
     <Card className="border-[#D1D1D1] shadow-subtle bg-white">
@@ -263,7 +276,12 @@ export function ProdutosSection({
                           min={1}
                           max={p.estoque}
                           value={p.qtd}
-                          onChange={(e) => updateQtd(p.key, parseInt(e.target.value) || 1)}
+                          onChange={(e) => updateQtd(p.key, e.target.value)}
+                          onBlur={(e) => {
+                            if (p.qtd === '' || Number(p.qtd) < 1) {
+                              updateQtd(p.key, '1')
+                            }
+                          }}
                           className="h-8 w-16 bg-[#F5F5F7] border-[#D1D1D1] px-2 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                         {p.id !== 'N/A' && p.estoque !== undefined && (
@@ -279,12 +297,15 @@ export function ProdutosSection({
                         min={0}
                         step="0.01"
                         value={p.preco}
-                        onChange={(e) => updatePreco(p.key, parseFloat(e.target.value) || 0)}
+                        onChange={(e) => updatePreco(p.key, e.target.value)}
+                        onBlur={(e) => {
+                          if (p.preco === '') updatePreco(p.key, '0')
+                        }}
                         className="h-8 bg-[#F5F5F7] border-[#D1D1D1] px-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </TableCell>
                     <TableCell className="font-bold text-primary">
-                      R$ {(p.preco * p.qtd).toFixed(2)}
+                      R$ {((Number(p.preco) || 0) * (Number(p.qtd) || 0)).toFixed(2)}
                     </TableCell>
                     <TableCell>
                       <Button
